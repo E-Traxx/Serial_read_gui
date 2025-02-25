@@ -214,6 +214,7 @@ app.layout = html.Div(
 
 
 #LAYOUT ENDET HIER
+# das kann später weg, nicht nötig im späteren verlauf 
 
 @app.callback(
 
@@ -227,7 +228,7 @@ app.layout = html.Div(
     State('temp-store', 'data'),
     State('voltage_store', 'data'),
     State('gyro-store', 'data'),
-    State('power-store', 'data'),                                   # muss noch anpassen 2 grapghen benutzen gleiche daten
+    State('power-store', 'data'),                                   
 )
 
 def update_store(n, speed_data, temp_data, voltage_data, gyro_data, power_data):  
@@ -244,7 +245,7 @@ def update_store(n, speed_data, temp_data, voltage_data, gyro_data, power_data):
 
 # Random daten generieren hier!!!
 
-def update_speed_store(data, time):                # diese functionen müssen später weg
+def update_speed_store(data, time):                
 
     data['time'].append(time)
     data['speed'].append(random.uniform(0, 100))
@@ -285,8 +286,9 @@ def limit_data(data, max_points):
     return data
 
 
-
+#bis hier wird abgerissen
 #änderungen der functions beginnt hier 
+
 
 @app.callback(
     Output('battery-charge','figure'),
