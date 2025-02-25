@@ -8,7 +8,7 @@ import random
 
 app = dash.Dash(__name__)
 
-
+#LAYOUT beginnt hier
 
 graph_1_fig = go.Figure()         # speed 
 graph_2_fig = go.Figure()       # current und Leistung
@@ -29,7 +29,7 @@ app.layout = html.Div(
         html.Div(
             f"{i}",
             style={
-                "position": "absolute",                         # durch absolute lassen sich die dinger bewegen
+                "position": "absolute",                         
                 "top": "50px",
                 "left": f"{100 + (i-1)*150}px",                 #   ok?
                 "fontSize": "18px"
@@ -64,11 +64,11 @@ app.layout = html.Div(
             }
         ),
 
-        # Interval und Store für die LEDs
+        # interval und Store für die LEDs
         dcc.Interval(id='interval-component_led', interval=5000, n_intervals=0),
         html.Div(
             children=[
-                # (Links) 3 kleine Graphen
+            
                 html.Div(
                     children=[
                         dcc.Graph(id='graph-1', figure=graph_1_fig,
@@ -91,7 +91,7 @@ app.layout = html.Div(
                          }
 
                 ),
-                # (Rechts) großer Graph oben, 4 kleine Graphen darunter
+                # großer Graph oben, 4 kleine Graphen darunter
                 html.Div(
                     children=[
                         dcc.Graph(id='big-graph', figure=big_graph_fig,
@@ -197,7 +197,7 @@ app.layout = html.Div(
                 'position': 'absolute',
                 'right': '20px',
                 'top': '100px',
-                'gap': '20px'  # Abstand zwischen Elementen
+                'gap': '20px'  
             }
         )
     ]
@@ -213,6 +213,8 @@ app.layout = html.Div(
 )
 
 
+#LAYOUT ENDET HIER
+
 @app.callback(
 
     Output('speed-store', 'data'),
@@ -221,14 +223,14 @@ app.layout = html.Div(
     Output('gyro-store', 'data'),
     Output('power-store','data'),
     Input('interval-component', 'n_intervals'),                     # trigger bei einem reicht aus beim callback 
-    State('speed-store', 'data'),
+    State('speed-store', 'data'),                                   # abspeichern 
     State('temp-store', 'data'),
     State('voltage_store', 'data'),
     State('gyro-store', 'data'),
     State('power-store', 'data'),                                   # muss noch anpassen 2 grapghen benutzen gleiche daten
 )
 
-def update_store(n, speed_data, temp_data, voltage_data, gyro_data, power_data):    
+def update_store(n, speed_data, temp_data, voltage_data, gyro_data, power_data):  
 
     new_time = pd.Timestamp.now().isoformat()
     speed_data = update_speed_store(speed_data, new_time)
@@ -239,7 +241,10 @@ def update_store(n, speed_data, temp_data, voltage_data, gyro_data, power_data):
     
     return speed_data, temp_data, voltage_data, gyro_data, power_data
 
-def update_speed_store(data, time):
+
+# Random daten generieren hier!!!
+
+def update_speed_store(data, time):                # diese functionen müssen später weg
 
     data['time'].append(time)
     data['speed'].append(random.uniform(0, 100))
@@ -280,6 +285,9 @@ def limit_data(data, max_points):
     return data
 
 
+
+#änderungen der functions beginnt hier 
+
 @app.callback(
     Output('battery-charge','figure'),
     Input('interval-component_battery','n_intervals')
@@ -300,7 +308,7 @@ def battery_charge_status(n):
                 line=dict(color="white", width=2),
                 fillcolor="rgba(0,0,0,0)"
             ),
-            # Inneres Rechteck 
+        
             dict(
                 type="rect",
                 xref="paper",
@@ -552,7 +560,7 @@ def update_gyro(n,data):
     Input('interval-component_led', 'n_intervals')
 )
 
-def update_led_and_store(n_intervals):
+def update_led(n_intervals):
     errors = [random.randint(0,1) for _ in range(9)]
   
     base_style = {
