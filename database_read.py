@@ -150,7 +150,7 @@ TABLES['brake_throttle'] = (
 )
 
 TABLES['steering_angle'] = (
-     "CREATE TABLE `streeing_angle` ("
+     "CREATE TABLE `steering_angle` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
     "  `values` int"
@@ -216,8 +216,8 @@ TABLES['errors'] = (
 # erstellt die tables
 for table_name in TABLES:
     table_description = TABLES[table_name]
-
-cursor.execute(table_description)
+    cursor.execute(table_description)
+    
 cursor.close()
 data_base.close()
 
