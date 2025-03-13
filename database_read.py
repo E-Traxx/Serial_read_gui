@@ -1,10 +1,11 @@
-import mysql.connector, random
+import random
 from mysql.connector import errorcode
+from sqlalchemy import create_engine,text
 import serial,time
 from flask import Flask, jsonify
 
 
-DB_NAME = 'test_01'    
+   
 
 
 app = Flask(__name__)
@@ -34,7 +35,6 @@ def get_data():
     y_gyro = random.uniform(-1, 1)
 
     battery_status = random.uniform(0,100)
-    
     
 
     #errors in 0/1
@@ -84,144 +84,154 @@ def get_data():
             "error_undervotlage":error_inverter_undervoltage,
             "error_test":error_test
         }
-       
-
     })
-    
-
-if __name__ == '__main__':
-    app.run(host = '127.0.0.1',port = 8024)
 
 
 
+user = 'root'
+password = 'Etraxx_25'
+host = 'localhost'
+database = 'test_01'
+
+connection_url= f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
+engine = create_engine(connection_url, echo=True)
 
 
-
-data_base = mysql.connector.connect(user = 'root', password = 'Etraxx_25',host = 'localhost', database ='test_01')
-
-if data_base.is_connected():
-    print("connected with: " + DB_NAME)
-else:
-    print("Error, not connected")
-
-cursor = data_base.cursor()
 
 TABLES = {}
 TABLES['APPS'] = (
-    "CREATE TABLE `APPS` ("
+    "CREATE TABLE IF NOT EXISTS `APPS` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `APPS ACCEL` int,"
+    "  `APPS BRAKE` int"
     ") ENGINE=InnoDB"
 )
 
 TABLES['wheel_speed']=(
-     "CREATE TABLE `wheel_speed` ("
+     "CREATE TABLE IF NOT EXISTS `wheel_speed` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `speed` int"
     ") ENGINE=InnoDB"
 
 )
 
 TABLES['soc'] = (
-     "CREATE TABLE `soc` ("
+     "CREATE TABLE IF NOT EXISTS `soc` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `SOC 1` int,"
+    "  `SOC 2` int"
     ") ENGINE=InnoDB"
 )
 
 
-TABLES['brake_pressure'] = (
-     "CREATE TABLE `brake_pressure` ("
-    "id INT PRIMARY KEY AUTO_INCREMENT,"
-    "`time` int,"
-    "`values` int"
-    ") ENGINE=InnoDB"
-)
-
-TABLES['brake_throttle'] = (
-     "CREATE TABLE `brake_throttle` ("
-    "id INT PRIMARY KEY AUTO_INCREMENT,"
-    "  `time` int,"
-    "  `values` int"
-    ") ENGINE=InnoDB"
-)
-
+#TABLES['brake_pressure'] = (
+#     "CREATE TABLE `brake_pressure` ("
+#    "id INT PRIMARY KEY AUTO_INCREMENT,"
+#    "`time` int,"
+#    "`values` int"
+#    ") ENGINE=InnoDB"
+#
+#
+#TABLES['brake_throttle'] = (
+#   "CREATE TABLE `brake_throttle` ("
+#  "id INT PRIMARY KEY AUTO_INCREMENT,"
+#  "  `time` int,"
+#  "  `values` int"
+#  ") ENGINE=InnoDB"
+#
+#
 TABLES['steering_angle'] = (
-     "CREATE TABLE `steering_angle` ("
+     "CREATE TABLE IF NOT EXISTS `steering_angle` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `Steering angle` int"
     ") ENGINE=InnoDB"
 )
 
 TABLES['current_sensor'] = (
-     "CREATE TABLE `current_sensor` ("
+     "CREATE TABLE IF NOT EXISTS `current_sensor` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `current sensor` int"
     ") ENGINE=InnoDB"
 )
 
 TABLES['suspension'] = (
-     "CREATE TABLE `suspension` ("
+     "CREATE TABLE IF NOT EXISTS `suspension` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `suspension FR` int,"
+    "  `suspension FL` int,"
+    "  `suspension RR` int,"
+    "  `suspension RL` int"
     ") ENGINE=InnoDB"
 )
 
 TABLES['gyro'] = (
-     "CREATE TABLE `gyro` ("
+     "CREATE TABLE IF NOT EXISTS `gyro` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `SBG-roll` int,"
+    "  `SBG-pitch` int,"
+    "  `SBG-yaw` int"
     ") ENGINE=InnoDB"
 )
 
-TABLES['disciplines'] = (
-     "CREATE TABLE `disciplines` ("
+TABLES['Temperature'] = (
+     "CREATE TABLE IF NOT EXISTS `Temperature` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
-    "  `time` int,"
-    "  `values` int"
+    "  `TEMPERATURE Motor` int,"
+    "  `TEMPERATURE Inverter` int,"
+    "  `TEMPERATURE Battery` int"
     ") ENGINE=InnoDB"
 )
 
-TABLES['torque_slipcontroll'] = (
-     "CREATE TABLE `torque_slipcontroll` ("
-    "id INT PRIMARY KEY AUTO_INCREMENT,"
-    "  `time` int,"
-    "  `values` int"
-    ") ENGINE=InnoDB"
-)
+#TABLES['torque_slipcontroll'] = (
+#     "CREATE TABLE `torque_slipcontroll` ("
+#    "id INT PRIMARY KEY AUTO_INCREMENT,"
+#    "  `time` int,"
+#    "  `values` int"
+#    ") ENGINE=InnoDB"
+#)
 
-TABLES['mecanical_power'] = (
-     "CREATE TABLE `mecanical_power` ("
+TABLES['Inverter'] = (
+     "CREATE TABLE IF NOT EXISTS `Inverter` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `Input/Inverter power` int"
     ") ENGINE=InnoDB"
 )
 
 TABLES['errors'] = (
-     "CREATE TABLE `errors` ("
+     "CREATE TABLE IF NOT EXISTS `errors` ("
     "id INT PRIMARY KEY AUTO_INCREMENT,"
     "  `time` int,"
-    "  `values` int"
+    "  `error undervotlage` int,"
+    "  `error current` int,"
+    "  `error voltage` int,"
+    "  `error BSPD` int,"
+    "  `error soc` int,"
+    "  `error Temperature motor` int,"
+    "  `error Temperature battery` int,"
+    "  `error Temperature inverter` int"
     ") ENGINE=InnoDB"
 )
 
 # erstellt die tables
-for table_name in TABLES:
-    table_description = TABLES[table_name]
-    cursor.execute(table_description)
-    
-cursor.close()
-data_base.close()
+with engine.connect() as connection:
+    for table_name in TABLES:
+        table_description = TABLES[table_name]
+        connection.execute(text(table_description))
 
 
 
+
+
+
+if __name__ == '__main__':
+    app.run(host = '127.0.0.1',port = 8024)
 
 
