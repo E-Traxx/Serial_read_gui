@@ -1,12 +1,15 @@
 from sqlalchemy import create_engine, Column,Integer, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import serial, time, random, os, subprocess
+import serial, time, random, os, subprocess,re 
 from datetime import datetime
 from flask import Flask, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
+from itertools import cycle
+#//// wie übergibt der zahlen? 001,01 oder 1 wie wird das dargestellt \\\\
 
-
+baudrate = 115200
+serial_port = "COM3"
 
 user = 'root'
 password = 'Etraxx_25'
@@ -15,21 +18,79 @@ database = 'test_01'
 port = "3306"  
 path = '/Users/imagine_losing/Desktop/Backup_files'
 
+
 connection_url= f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
 engine = create_engine(connection_url, echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
-   
 
 app = Flask(__name__)
+   
+
+#ser = serial.Serial(serial_port, baudrate, timeout=0.1)
+
+SIMULATED_MESSAGES = [
+   
+    "+RXDATA:02,01,230",
+    "CORRUPTED_DATA",   
+]
+
+def simulated_uart_generator():
+    for random_UART in cycle(SIMULATED_MESSAGES):
+        yield random_UART
+        time.sleep(0.1)
+
+
+def get_sensor_values():
+
+    uart_stream = simulated_uart_generator()      
+
+    while True:
+        #line = ser.readline().decode('ascii', errors='ignore').strip()
+        line = next(uart_stream).strip()
+        if not "RXDATA" in line:
+            print("HALLO!!!!!!keine RXDATA Nachricht!!!!!")
+            yield {}
+            continue
+        numbers = re.findall(r'\d+', line) 
+
+        if len(numbers) >= 3:
+            value = numbers[2]
+            try:
+                value = int(numbers[2])
+            except ValueError:
+                print("ungültiger Wert")
+                continue
+            
+                         
+            
+
+            sensor_id = numbers[0]    
+            sensor_values = {}
+
+            match sensor_id:
+                  case "01":
+                      sensor_values["accel"] = value                          
+                  case "02":
+                     sensor_values["speed"] = value
+                  case "03":
+                      sensor_values["brake"] = value
+                  case _:
+                      print("zu faul für den rest")
+
+            print("!!!!!!!!!!!",sensor_values)
+            yield sensor_values
+
+
+sensor_reader = get_sensor_values()                 #so ne kacke, wie soll ich darauf kommen es global aufzurufen, kotz
+
 
 def get_data(): 
+    sensor_data = next(sensor_reader)
+    
 
-    current_time = int(time.time())
+    current_time = int(datetime.now().strftime('%H%M%S'))
 
-    speed = random.randint(0,115)
-    accel = random.randint(0,100)
-    brake = random.randint(0,100) 
 
     temp_inverter = random.randint(80, 128)
     temp_battery = random.randint(50, 64)
@@ -68,9 +129,9 @@ def get_data():
     return {
         "current_time": current_time,
 
-        "speed": speed,
-        "ACCEL":accel,
-        "BRAKE": brake,
+        "speed": sensor_data.get("speed",0),
+        "ACCEL":sensor_data.get("accel",0),
+        "BRAKE":sensor_data.get("brake",0),
 
         "temp_inverter": temp_inverter,
         "temp_battery":temp_battery,
@@ -103,6 +164,8 @@ def get_data():
             "error_test":error_test
         }
     }
+
+
 
 def give_data_to_database():
         data = get_data()
@@ -291,7 +354,7 @@ class Errors(Base):
 
 #startet seperat  give_data_to_database mit interval
 scheduler = BackgroundScheduler()
-scheduler.add_job(give_data_to_database, 'interval', seconds = 2)
+scheduler.add_job(give_data_to_database,'interval',seconds=2,coalesce=True,max_instances=3)
 scheduler.start()
 
 
@@ -319,7 +382,7 @@ def backup():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(backup, 'interval', seconds = 30)
+scheduler.add_job(backup, 'interval', seconds = 200,coalesce=True)
 scheduler.start()
 
 
@@ -333,6 +396,5 @@ def transfer_data():
 
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
-    app.run(host = '127.0.0.1',port = 8024, debug = True)
-
+    app.run(host = '127.0.0.1',port = 8024, debug = False)
 
