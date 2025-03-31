@@ -7,10 +7,10 @@ from flask import Flask, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 from itertools import cycle
 
-#//// wie übergibt der zahlen? 001,01 oder 1 wie wird das dargestellt \\\\
+
 
 baudrate = 115200
-serial_port = "COM3"
+serial_port = "COM3"                        #bei windows, falls verändern 
 
 user = 'root'
 password = 'Etraxx_25'
@@ -28,7 +28,7 @@ Session = sessionmaker(bind=engine)
 app = Flask(__name__)
    
 
-#ser = serial.Serial(serial_port, baudrate, timeout=0.1)
+#ser = serial.Serial(serial_port, baudrate, timeout=0.1)        #vorerst off
 
 SIMULATED_MESSAGES = [
 
@@ -51,14 +51,14 @@ SIMULATED_MESSAGES = [
     f"+RXDATA:51,01,{random.randint(100,500)}",
     f"+RXDATA:52,01,{random.randint(100,500)}",
     f"+RXDATA:60,01,{random.randint(100,500)}",
-    f"+RXDATA:71,01,{random.randint(100,500)}",
-    f"+RXDATA:72,01,{random.randint(100,500)}",
-    f"+RXDATA:73,01,{random.randint(100,500)}",
-    f"+RXDATA:74,01,{random.randint(100,500)}",
-    f"+RXDATA:75,01,{random.randint(100,500)}",
-    f"+RXDATA:76,01,{random.randint(100,500)}",
-    f"+RXDATA:77,01,{random.randint(100,500)}",
-    f"+RXDATA:78,01,{random.randint(100,500)}",
+    f"+RXDATA:71,01,{random.randint(0,1)}",
+    f"+RXDATA:72,01,{random.randint(0,1)}",
+    f"+RXDATA:73,01,{random.randint(0,1)}",
+    f"+RXDATA:74,01,{random.randint(0,1)}",
+    f"+RXDATA:75,01,{random.randint(0,1)}",
+    f"+RXDATA:76,01,{random.randint(0,1)}",
+    f"+RXDATA:77,01,{random.randint(0,1)}",
+    f"+RXDATA:78,01,{random.randint(0,1)}",
 
     "CORRUPTED_DATA",   
 ]
@@ -70,12 +70,10 @@ def simulated_uart_generator():
 
 
 def get_sensor_values():
-
     uart_stream = simulated_uart_generator()      
-
     while True:
-        #line = ser.readline().decode('ascii', errors='ignore').strip() #eigentlich diese aber das müssen wir anpassen weil keine einzelnen daten kommen
-        line = next(uart_stream).strip()
+        #line = ser.readline().decode('ascii', errors='ignore').strip() 
+        line = next(uart_stream).strip()        #ist für die simualtion
 
         if not "RXDATA" in line:
             print("HALLO!!!!!!keine RXDATA Nachricht!!!!!")
@@ -88,9 +86,6 @@ def get_sensor_values():
         if len(numbers) == 3:
             value = numbers[2]
             current_time = int(datetime.now().strftime('%H%M%S'))
-            
-            
-
             try:
                 value = int(numbers[2])
             except ValueError:
@@ -102,7 +97,6 @@ def get_sensor_values():
             "sensor_id": sensor_id,
             "error":{}
             }
-
             #habe die ports so mal gesetzt
             match sensor_id:
                 case "01":
@@ -114,7 +108,6 @@ def get_sensor_values():
                 case "03":
                     sensor_values["brake"] = value
                     
-
                 # Temperaturen
                 case "10":
                     sensor_values["temp_inverter"] = value
@@ -193,63 +186,68 @@ def get_sensor_values():
                 case _:
                     print("Unbekannt, ew, whats that???!!!", sensor_id)
 
-            print("!!!!!!!!!!!",sensor_values)
+            print("übertragen: ",sensor_values)
+        
             yield sensor_values
+           
         else:
             yield {}
 
 
-sensor_reader = get_sensor_values()                 #so ne kacke, wie soll ich darauf kommen es global aufzurufen, kotz
+sensor_reader = get_sensor_values()                 
+#extra speicher wo die daten eingespeist werden
 
 
 def get_data(): 
-
-    #daten  von da oben sollen hier einegragen werde
-
-
+    data = next(sensor_reader,{})
+    print("!!!! attention !!!: ", data)
     current_time = int(datetime.now().strftime('%H%M%S'))
-
-    #war vorher da, um an die GUI zu übertagen und die Datenbank, aber ändern wir ja 
-    temp_inverter = random.randint(80, 128)
-    temp_battery = random.randint(50, 64)
-    temp_motor = random.randint(60, 100)
-
-    power = random.randint(300, 500)
-    current = random.uniform(90,120)
-
-    voltage_1 = random.randint(0, 100)        #SOC_1
-    voltage_2 = random.randint(0, 588)         #soc_2
-
-    suspension_FL = random.randint(0,100)
-    suspension_RR = random.randint(0,100)
-    suspension_FR = random.randint(0,100)
-    suspension_RL  = random.randint(0,100)
-
-    x_gyro = random.uniform(-1, 1)
-    y_gyro = random.uniform(-1, 1)
-    z_gyro = random.uniform(-1, 1)
-
-    battery_status = random.uniform(0,100)
     
 
+    apps_accel= data.get("accel", 0)
+    apps_brake = data.get("brake",0)
+    apps_speed = data.get("speed",0)
+
+
+    temp_inverter = data.get("temp_inverter",0)
+    temp_battery = data.get("temp_battery",0)
+    temp_motor = data.get("temp_motor",0)
+
+    power = data.get("power",0)
+    current = data.get("current",0)
+
+    voltage_1 = data.get("soc_1",0)       #SOC_1
+    voltage_2 = data.get("soc_2",0)         #soc_2
+
+    suspension_FL = data.get("FL",0)
+    suspension_RR = data.get("RR",0)
+    suspension_FR = data.get("FR",0)
+    suspension_RL = data.get("RL",0)
+
+    x_gyro = data.get("x_gyro",0)
+    y_gyro = data.get("y_gyro",0)
+    z_gyro = data.get("z_gyro",0)
+
+    battery_status = data.get("battery_status",0)
+    
     #errors in 0/1
-    error_temperature_inverter = random.randint(0,1)
-    error_temperature_Battery = random.randint(0,1)
-    error_temperature_motor = random.randint(0,1)
-    error_soc = random.randint(0,1)
-    error_BSPD = random.randint(0,1)
-    error_current = random.randint(0,1)
-    error_voltage = random.randint(0,1)
-    error_inverter_undervoltage = random.randint(0,1)
-    error_test = random.randint(0,1)
+    error_temperature_inverter = data.get("error", {}).get("inverter",1)
+    error_temperature_Battery = data.get("error", {}).get("battery",1)
+    error_temperature_motor = data.get("error", {}).get("motor", 1)
+    error_soc = data.get("error", {}).get("soc", 1)
+    error_BSPD = data.get("error", {}).get("BSPD", 1)
+    error_current = data.get("error", {}).get("error_current", 1)
+    error_voltage = data.get("error", {}).get("error_voltage", 1)
+    error_inverter_undervoltage = data.get("error", {}).get("error_inverter_undervoltage", 1)
+    error_test = data.get("error", {}).get("error_test", 1)
 
 
     return {
         "current_time": current_time,
 
-        "speed": latest_data.apps_accel,
-        "ACCEL":latest_data.apps_accel,
-        "BRAKE":latest_data.apps_brake,
+        "speed":apps_speed,
+        "ACCEL":apps_accel,
+        "BRAKE":apps_brake,
 
         "temp_inverter": temp_inverter,
         "temp_battery":temp_battery,
@@ -285,44 +283,193 @@ def get_data():
 
 
 
+
+
+
 def give_data_to_database():
     data = next(sensor_reader,{})
     save_to_database(data)
 
-
-
-def save_to_database():
-    
-
+def save_to_database(data):
     session = Session()
     try:
-       #wollte mir eine neue logik zum eintragen in die Datenbank überlegen, 
-       #wenn du bock hast änder das einfach wie du die datenbank am liebsten machen möchtest,
-       #ich würde das so machen, dass wir die daten immer an ein dict. geben was global ist und was wir dann immer wenn es eine neuen wert gibt jeweils,
-       #das aus dem dict. holen und wieder leeren, 
 
-       #
-         
+        sensor_id = data.get("sensor_id")
+        time_value = int(datetime.now().strftime('%H%M%S'))
+        new_obj = None
 
+    
+        if sensor_id == "01":
+            new_obj = AppsAccel(
+                time=time_value, 
+                accel=data.get("accel", 0)  
+            )
+        elif sensor_id == "02":
+            new_obj = WheelSpeed(
+                time=time_value, 
+                speed=data.get("speed", 0)
+            )
+        elif sensor_id == "03":
+            new_obj = AppsBrake(
+                time=time_value, 
+                brake=data.get("brake", 0)
+            )
+        elif sensor_id == "10":
+            new_obj = TemperatureInverter(
+                time=time_value, 
+                value=data.get("temp_inverter", 0)
+            )
+        elif sensor_id == "11":
+            new_obj = TemperatureBattery(
+                time=time_value, 
+                value=data.get("temp_battery", 0)
+            )
+        elif sensor_id == "12":
+            new_obj = TemperatureMotor(
+                time=time_value, 
+                value=data.get("temp_motor", 0)
+            )
+        elif sensor_id == "15":
+            new_obj = SteeringAngle(
+                time=time_value, 
+                steering_angle=data.get("steering_value", 0)
+            )
+        elif sensor_id == "20":
+            new_obj = Inverter(
+                time=time_value, 
+                inverter_power=data.get("power", 0)
+            )
+        elif sensor_id == "21":
+            new_obj = CurrentSensor(
+                time=time_value, 
+                current_sensor=data.get("current", 0.0)
+            )
+        elif sensor_id == "30":
+            new_obj = SuspensionFL(
+                time=time_value, 
+                value=data.get("FL", 0)
+            )
+        elif sensor_id == "31":
+            new_obj = SuspensionRR(
+                time=time_value, 
+                value=data.get("RR", 0)
+            )
+        elif sensor_id == "32":
+            new_obj = SuspensionFR(
+                time=time_value, 
+                value=data.get("FR", 0)
+            )
+        elif sensor_id == "33":
+            new_obj = SuspensionRL(
+                time=time_value, 
+                value=data.get("RL", 0)
+            )
+        elif sensor_id == "40":
+            new_obj = Soc1(
+                time=time_value, 
+                soc1=data.get("soc_1", 0)
+            )
+        elif sensor_id == "41":
+            new_obj = Soc2(
+                time=time_value, 
+                soc2=data.get("soc_2", 0)
+            )
+        elif sensor_id == "50":
+            new_obj = GyroRoll(
+                time=time_value, 
+                value=float(data.get("x_gyro", 0.0))
+            )
+        elif sensor_id == "51":
+            new_obj = GyroPitch(
+                time=time_value, 
+                value=float(data.get("y_gyro", 0.0))
+            )
+        elif sensor_id == "52":
+            new_obj = GyroYaw(
+                time=time_value, 
+                value=float(data.get("z_gyro", 0.0))
+            )
+        elif sensor_id == "60":
+            new_obj = BatteryStatus(
+                time=time_value, 
+                value=data.get("battery_status", 0)
+            )
 
-        session.commit()
+        elif sensor_id == "70":
+            new_obj = ErrorBattery(
+                time=time_value, 
+                value=data.get("error", {}).get("battery", 0)
+            )
+        elif sensor_id == "71":
+            new_obj = ErrorInverter(
+                time=time_value, 
+                value=data.get("error", {}).get("inverter", 0)
+            )
+        elif sensor_id == "72":
+            new_obj = ErrorMotor(
+                time=time_value, 
+                value=data.get("error", {}).get("motor", 0)
+            )
+        elif sensor_id == "73":
+            new_obj = ErrorSOC(
+                time=time_value, 
+                value=data.get("error", {}).get("soc", 0)
+            )
+        elif sensor_id == "74":
+            new_obj = ErrorBSPD(
+                time=time_value, 
+                value=data.get("error", {}).get("BSPD", 0)
+            )
+        elif sensor_id == "75":
+            new_obj = ErrorCurrent(
+                time=time_value, 
+                value=data.get("error", {}).get("error_current", 0)
+            )
+        elif sensor_id == "76":
+            new_obj = ErrorVoltage(
+                time=time_value, 
+                value=data.get("error", {}).get("error_voltage", 0)
+            )
+        elif sensor_id == "77":
+            new_obj = ErrorUndervoltage(
+                time=time_value, 
+                value=data.get("error", {}).get("error_inverter_undervoltage", 0)
+            )
+        elif sensor_id == "78":
+            new_obj = ErrorTest(
+                time=time_value, 
+                value=data.get("error", {}).get("error_test", 0)
+            )
+        else:
+            print(f"unbekannte id: {sensor_id}")
+            return
+
+        if new_obj:
+            session.add(new_obj)
+            session.commit()
+            print(f"gespeichert: ID: {sensor_id} (Zeit: {time_value})")
+        else:
+            print("Konnte keine Daten erstellen")
 
     except Exception as e:
         session.rollback()
-        print(f"Datenbankfehler: {e}")
+        print(f"Fehler bei sensor_id {sensor_id}: {str(e)}")
     finally:
         session.close()
 
 
 
-
-class Apps(Base):
-    __tablename__ = 'APPS'  
+class AppsAccel(Base):
+    __tablename__ = 'apps_accel'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    apps_accel = Column("APPS ACCEL", Integer) 
-    apps_brake = Column("APPS BRAKE", Integer)  
+    accel = Column(Integer)
 
+class AppsBrake(Base):
+    __tablename__ = 'apps_brake'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    brake = Column(Integer)
 
 class WheelSpeed(Base):
     __tablename__ = 'wheel_speed'
@@ -330,69 +477,160 @@ class WheelSpeed(Base):
     time = Column(Integer)
     speed = Column(Integer)
 
-class Soc(Base):
-    __tablename__ = 'soc'
+class BatteryStatus(Base):
+    __tablename__ = 'battery_status'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    soc1 = Column("SOC 1", Integer)
-    soc2 = Column("SOC 2", Integer)
+    value = Column(Integer)
+
+class Soc1(Base):
+    __tablename__ = 'soc_1'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    soc1 = Column(Integer)
+
+class Soc2(Base):
+    __tablename__ = 'soc_2'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    soc2 = Column(Integer)
 
 class SteeringAngle(Base):
     __tablename__ = 'steering_angle'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    steering_angle = Column("Steering angle", Integer)
+    steering_angle = Column(Integer)
 
 class CurrentSensor(Base):
     __tablename__ = 'current_sensor'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    current_sensor = Column("current sensor", Integer)
+    current_sensor = Column(Integer)
 
-class Suspension(Base):
-    __tablename__ = 'suspension'
+class SuspensionFL(Base):
+    __tablename__ = 'suspension_fl'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    suspension_fr = Column("suspension FR", Integer)
-    suspension_fl = Column("suspension FL", Integer)
-    suspension_rr = Column("suspension RR", Integer)
-    suspension_rl = Column("suspension RL", Integer)
+    value = Column(Integer)
 
-class Gyro(Base):
-    __tablename__ = 'gyro'
+class SuspensionRR(Base):
+    __tablename__ = 'suspension_rr'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    sbg_roll = Column("SBG-roll", Float)  
-    sbg_pitch = Column("SBG-pitch", Float)
-    sbg_yaw = Column("SBG-yaw", Float)
+    value = Column(Integer)
 
-class Temperature(Base):
-    __tablename__ = 'Temperature'
+class SuspensionFR(Base):
+    __tablename__ = 'suspension_fr'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    temperature_motor = Column("TEMPERATURE Motor", Integer)
-    temperature_inverter = Column("TEMPERATURE Inverter", Integer)
-    temperature_battery = Column("TEMPERATURE Battery", Integer)
+    value = Column(Integer)
 
+class SuspensionRL(Base):
+    __tablename__ = 'suspension_rl'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class GyroRoll(Base):
+    __tablename__ = 'gyro_roll'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Float)
+
+class GyroPitch(Base):
+    __tablename__ = 'gyro_pitch'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Float)
+
+class GyroYaw(Base):
+    __tablename__ = 'gyro_yaw'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Float)
+
+class TemperatureMotor(Base):
+    __tablename__ = 'temperature_motor'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class TemperatureInverter(Base):
+    __tablename__ = 'temperature_inverter'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class TemperatureBattery(Base):
+    __tablename__ = 'temperature_battery'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
 
 class Inverter(Base):
-    __tablename__ = 'Inverter'
+    __tablename__ = 'inverter'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    inverter_power = Column("Input/Inverter power", Integer)
+    inverter_power = Column(Integer)
 
-class Errors(Base):
-    __tablename__ = 'errors'
+class ErrorBattery(Base):
+    __tablename__ = 'error_battery'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    error_undervoltage = Column("error undervotlage", Integer)
-    error_current = Column("error current", Integer)
-    error_voltage = Column("error voltage", Integer)
-    error_bspd = Column("error BSPD", Integer)
-    error_soc = Column("error soc", Integer)
-    error_temperature_motor = Column("error Temperature motor", Integer)
-    error_temperature_battery = Column("error Temperature battery", Integer)
-    error_temperature_inverter = Column("error Temperature inverter", Integer)
+    value = Column(Integer)
+
+class ErrorInverter(Base):
+    __tablename__ = 'error_inverter'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorMotor(Base):
+    __tablename__ = 'error_motor'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorTest(Base):
+    __tablename__ = 'error_test'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+
+class ErrorSOC(Base):
+    __tablename__ = 'error_soc'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorBSPD(Base):
+    __tablename__ = 'error_bspd'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorCurrent(Base):
+    __tablename__ = 'error_current'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorVoltage(Base):
+    __tablename__ = 'error_voltage'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+class ErrorUndervoltage(Base):
+    __tablename__ = 'error_undervoltage'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    time = Column(Integer)
+    value = Column(Integer)
+
+
+
+
 
 #falls wir benötigen
 def backup():
@@ -419,7 +657,7 @@ def backup():
 
 #startet seperat  give_data_to_database mit interval
 scheduler = BackgroundScheduler()
-scheduler.add_job(give_data_to_database, 'interval', seconds=0.01)
+scheduler.add_job(give_data_to_database, 'interval', seconds=0.3,coalesce=True)
 scheduler.add_job(backup, 'interval', seconds=200, coalesce=True)
 scheduler.start()
 
