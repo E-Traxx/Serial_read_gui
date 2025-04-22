@@ -222,7 +222,8 @@ app.layout = html.Div(
         ),
     html.Div(
     children=[       
-        dcc.Interval(id='speed_text_figure', interval=1000, n_intervals=0),                                                           
+        dcc.Interval(id='speed_text_figure', interval=1000, n_intervals=0), 
+        dcc.Store(id = 'little_windows_store',data = {"signal":[]}),                                                          
         dcc.Graph(
             id='speed_text',
             style={'width': '224px', 'height': '230px', 'borderRadius': '15px', 'overflow': 'hidden'}
@@ -309,17 +310,17 @@ def update_store(n, speed_power_data, temp_data, soc_data, gyro_data, sus_data, 
 
     return speed_power_data, temp_data, soc_data, gyro_data, sus_data, battery_data
 
-# Random daten generieren hier!!!
+
 
 def update_speed_power_store(data, time):           
     data_read = fetch_data()     
 
     data['time'].append(time)
-    data['speed'].append(data_read.get('speed',0))
+    data['speed'].append(data_read.get('apps_speed',0))
     data['power'].append(data_read.get('power',0))
-    data['current'].append(data_read.get('current',0))
-    data['ACCEL'].append(data_read.get('ACCEL',0))
-    data['BRAKE'].append(data_read.get('BRAKE',0))
+    data['current'].append(data_read.get('current_sensor',0))
+    data['ACCEL'].append(data_read.get('apps_accel',0))
+    data['BRAKE'].append(data_read.get('brake',0))
 
 
     return limit_data(data, 100)
@@ -328,9 +329,9 @@ def update_temp_store(data, time):
     data_read = fetch_data() 
 
     data['time'].append(time)
-    data['temperature_battery'].append(data_read.get('temp_battery', 0))
-    data['temperature_inverter'].append(data_read.get('temp_inverter', 0))
-    data['temperature_motor'].append(data_read.get('temp_motor', 0))
+    data['temperature_battery'].append(data_read.get('temperature_battery', 0))
+    data['temperature_inverter'].append(data_read.get('temperature_inverter', 0))
+    data['temperature_motor'].append(data_read.get('temperature_motor', 0))
 
     return limit_data(data, 100)
 
@@ -338,8 +339,8 @@ def update_soc_store(data, time):
     data_read = fetch_data() 
 
     data['time'].append(time)
-    data['soc_1'].append(data_read.get('soc_1', 0))
-    data['soc_2'].append(data_read.get('soc_2', 0))
+    data['soc_1'].append(data_read.get('soc1', 0))
+    data['soc_2'].append(data_read.get('soc2', 0))
 
     return limit_data(data, 100)
 
@@ -351,14 +352,14 @@ def update_gyro_store(data):
 
     return data
 
-def update_suspension_store(data, time):         #   #####1111
+def update_suspension_store(data, time):         
     data_read = fetch_data() 
 
     data['time'].append(time)
-    data['FL'].append(data_read.get('FL',0))
-    data['RR'].append(data_read.get('RR',0))
-    data['FR'].append(data_read.get('FR',0))
-    data['RL'].append(data_read.get('RL',0))
+    data['FL'].append(data_read.get('suspension_fl',0))
+    data['RR'].append(data_read.get('suspension_rr',0))
+    data['FR'].append(data_read.get('suspension_fr',0))
+    data['RL'].append(data_read.get('suspension_rl',0))
 
     return limit_data(data, 100)
 
@@ -367,8 +368,10 @@ def battery_store(data,time):
 
     data['battery_status'].append(data_read.get('battery_status',0))
 
+
     return data
     
+
 def limit_data(data, max_points):
 
     for key in data:
@@ -382,11 +385,11 @@ def limit_data(data, max_points):
     Output('temp_inver','figure'),
     Output('temp_batt','figure'),
     Output('charge_of_battery','figure'),
+    Output('small-graph-47','figure'),
     Input('speed_text_figure','n_intervals'),
     State('speed_power-store', 'data'),
     State('temp-store', 'data'),
     State('battery-store','data')
-
 )
 
 def show_current_speed(n, speed_power_data, temp_data, battery_data):
@@ -394,14 +397,16 @@ def show_current_speed(n, speed_power_data, temp_data, battery_data):
     data = fetch_data()
     
     # Hole aktuelle Werte (keine Listen!)
-    current_speed = data.get('speed', 0)
-    current_temp_battery = data.get('temp_battery', 0)
-    current_temp_motor = data.get('temp_motor', 0)
-    current_temp_inverter = data.get('temp_inverter', 0)
+    current_speed = data.get('apps_speed', 0)
+    current_temp_battery = data.get('temperature_battery', 0)
+    current_temp_motor = data.get('temperature_motor', 0)
+    current_temp_inverter = data.get('temperature_inverter', 0)
     current_charge_battery = data.get('battery_status',0)
+    signal = data.get('signal',0)
+    signal_value = int(signal)
 
     speed_text = go.Figure(go.Indicator(
-    mode="number",
+        mode="number",
         value=current_speed,
         number={"font": {"color": "cyan", "size": 50}},
         title={"text": "Speed (km/h)", "font": {"color": "white", "size": 20}}
@@ -439,9 +444,9 @@ def show_current_speed(n, speed_power_data, temp_data, battery_data):
     #TEMP battery
     temp_battery_text = go.Figure(go.Indicator(
         mode="number",
-        value=current_temp_battery,
+        value=  current_charge_battery,
         number={"font": {"color": "red", "size": 50}},
-        title={"text": "Battery in °C", "font": {"color": "white", "size": 20}}
+        title={"text": "Charge %", "font": {"color": "white", "size": 20}}
     ))
     temp_battery_text.update_layout(
         plot_bgcolor="#2a2a2a",
@@ -451,16 +456,27 @@ def show_current_speed(n, speed_power_data, temp_data, battery_data):
     #battery
     battery_charge_text = go.Figure(go.Indicator(
         mode="number",
-        value=current_charge_battery,
-        number={"font": {"color": "white", "size": 40}},
-        title={"text": "Charge %", "font": {"color": "white", "size": 20}}
+        value=current_temp_battery,
+        number={"font": {"color": "green", "size": 50}},
+        title={"text": "Battery in °C", "font": {"color": "white", "size": 20}}
     ))
     battery_charge_text.update_layout(
         plot_bgcolor="#2a2a2a",
         paper_bgcolor="#2a2a2a",
     )
-    return speed_text, temp_motor_text, temp_inverter_text, battery_charge_text, temp_battery_text
+    current_signal = go.Figure(go.Indicator(
+        mode="number",
+        value=signal_value,
+        number={"font": {"color": "white", "size": 50}},
+        title={"text": "signal: ", "font": {"color": "white", "size": 20}}
+     ))
+    current_signal.update_layout(
+        plot_bgcolor="#2a2a2a",
+        paper_bgcolor="#2a2a2a",
+     )
 
+
+    return speed_text, temp_motor_text, temp_inverter_text, temp_battery_text, battery_charge_text, current_signal
 
 #app.callback(
 #   Output('battery-charge','figure'),
@@ -821,45 +837,35 @@ def update_gyro(n,data):
 
 @app.callback(
     [Output(f'led{i}', 'style') for i in range(1, 10)],
-    Input('interval-component_led', 'n_intervals')
+    Input('interval-component_led', 'n_intervals'), 
 )
-
-def update_led(n_intervals):
-    data = fetch_data()
-
-    errors_dict = data.get("error", {})
-    error_list = [
-    errors_dict.get("battery", 1),
-    errors_dict.get("inverter", 1),
-    errors_dict.get("motor", 1),
-    errors_dict.get("soc", 1),
-    errors_dict.get("error_current", 1),
-    errors_dict.get("BSPD", 1),
-    errors_dict.get("error_voltage", 1),
-    errors_dict.get("error_undervotlage", 1),
-    errors_dict.get("error_test", 1)
-    ]
+def update_led(n):
+    data = fetch_data()  # Direkt Daten abrufen
     
-
-
-    base_style = {
-        "width": "30px",
-        "height": "30px",
-        "borderRadius": "50%",
-        "boxShadow": "0 0 15px rgb(255, 255, 0)",
-        "transition": "all 0.3s ease"
-    }
+    # Hole die Fehlerwerte direkt aus den Daten
+    error_list = [
+        data.get("error_temperature_battery", 0),  # Battery-Temperaturfehler
+        data.get("error_temperature_inverter", 0), # Inverter-Temperaturfehler
+        data.get("error_temperature_motor", 0),    # Motor-Temperaturfehler
+        data.get("error_soc", 0),                  # SOC-Fehler
+        data.get("error_current", 0),              # Stromfehler
+        data.get("bspd", 0),                       # BSPD-Fehler (Schreibweise beachten!)
+        data.get("error_voltage", 0),              # Spannungsfehler
+        data.get("error_undervoltage", 0),         # Unterspannungsfehler
+        data.get("error_undervoltage", 0)          # Platzhalter oder zusätzlicher Fehler
+    ]
 
     styles = []
-    for i in range(len(error_list)):
-        led_style = base_style.copy()
-        if error_list[i] == 0:
-            led_style["backgroundColor"] = "red"
-            led_style["boxShadow"] = "0 0 20px rgba(255, 0, 0, 0.8)"
-        else:
-            led_style["backgroundColor"] = "#00ff00"
-            led_style["boxShadow"] = "0 0 15px rgba(0, 255, 0, 0.5)"
+    for error in error_list:
+        led_style = {
+            "backgroundColor": "red" if error == 0 else "#00ff00",
+            "width": "30px",
+            "height": "30px",
+            "borderRadius": "50%",
+            "boxShadow": "0 0 20px rgba(255, 0, 0, 0.8)" if error == 0 else "0 0 15px rgba(0, 255, 0, 0.5)"
+        }
         styles.append(led_style)
+    
     return styles
     
 if __name__ == "__main__":
