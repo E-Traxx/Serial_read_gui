@@ -17,7 +17,16 @@ baudrate = 115200
 serial_port = "COM3"  
 
 
-engine = create_engine('sqlite:///telemetry.db', echo=True)
+user = 'root'
+password = 'Etraxx_25'
+host = 'localhost'
+database = 'test_01'
+port = "3306"  
+
+
+
+connection_url= f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
+engine = create_engine(connection_url, echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
@@ -31,16 +40,16 @@ latest_data = {}
 ID_LENGHTS = {
     '1': {'total_length': 16, 'infos': [(8, "apps_speed"), (8, "apps_accel")
         ]},
-    '2': {'total_length': 8, 'infos': [(1, "error"), (7, "temp_inverter")
+    '2': {'total_length': 8, 'infos': [(1, "error_current"), (7, "temperature_inverter")
         ]},
     '5': {'total_length': 32, 'infos': [
         (8, "brake"),
-        (8, "temp_battery"),
-        (8, "temp_motor"),
+        (8, "temperature_battery"),
+        (8, "temperature_motor"),
         (8, "power")
         ]},
     '6': {'total_length': 32, 'infos': [
-        (16, "current"),
+        (16, "current_sensor"),
         (16, "voltage_1")
         ]},
     '7': {'total_length': 32, 'infos': [
@@ -58,19 +67,19 @@ ID_LENGHTS = {
         (16, "battery_status")
         ]},
     '9': {'total_length': 16, 'infos': [
-        (8, "soc_1"),
-        (7, "soc_2"),
-        (1, "error_test")
+        (8, "soc1"),
+        (7, "soc2"),
+        (1, "error_soc")
         ]},
     'C': {'total_length': 8, 'infos': [
-        (1, "soc"),
+        (1, "error_soc"),
         (1, "bspd"),
         (1, "error_current"),
         (1, "error_voltage"),
         (1, "error_undervoltage"),
-        (1, "motor"),
-        (1, "battery"),
-        (1, "inverter")
+        (1, "error_temperature_motor"),
+        (1, "error_temperature_battery"),
+        (1, "error_temperature_inverter")
         ]
     }
 }
@@ -101,8 +110,10 @@ def process_data(pieces_of_hexa,id_str):
 
         result[value_description] = each_value 
 
+
+
     global latest_data
-    latest_data = {**latest_data, **result}         # 
+    latest_data = {**latest_data, **result}         
 
   
 #zerlegt die eingegangene message nach komma in 4 teile und wichtig sind 3(message) und 4(id)
@@ -111,11 +122,12 @@ def seperating_data(message):
     parts = message.split(',')
     if len(parts) < 4:
         raise ValueError("Die Nachricht entspricht nicht dem erwarteten Format")
-    hexa_message = parts[-1] 
-    ids = parts[3]
+    hexa_message = parts[2] 
+   #hexa_message = parts[-1]                #muss noch geändert werden wenn echte aten kommen
+    ids = parts[3]                      # muss überprüft werden
 
     #decode again
-    decoded_message = hexa_message.decode('ascii')
+    #hexa_message = hexa_message.encode('ascii')    !!!! muss dringend geprüft werden
 
     index = 0
     for id_data in ids:
@@ -127,17 +139,18 @@ def seperating_data(message):
             process_data(seperated_info, id_data)                               # hier gibt er den string ab zusammen mit der id
 
             index+=total_length_hexa
-    print("Fertig mit der erhaltenen Nachricht")
+            
 
 
 #hauptfunktion am lesen, lesen, lesen....
 def main():
 
     while True:
-        message = ser.readline().strip()
-        decoded_message = message.decode(encodeing ='ascii', errors ='ignore')
-        rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(60))
-        test_message = f"2,n,{rand_hex_str},123A49B5678C"
+       # message = ser.readline().strip()
+       # decoded_message = message.decode(encodeing ='ascii', errors ='ignore')
+        rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))        #random data
+        test_message = f"2,n,{rand_hex_str},123A49B5678C"                       #random
+       
         seperating_data(test_message)
         push_to_db()
         time.sleep(3)
@@ -153,13 +166,13 @@ def transfer_data():
 def push_to_db():
     session = Session()
     try:
+        current_time = int(time.time())
         for key, value in latest_data.items():
             if key in table_mapping:
                 table_name = table_mapping[key]
-                each_dict = table_name(key)     # das ist falsch!!!!!!! hier muss das richtig übergeben werden
-                
+                each_dict = table_name(time=current_time)
+                setattr(each_dict, key, value)
                 session.add(each_dict)
-
                 print("ausgeführt")
         session.commit()
     except Exception as e:
@@ -178,11 +191,11 @@ class Apps(Base):
     apps_accel = Column("apps_accel", Integer)
     apps_brake = Column("apps_brake", Integer)
 
-class WheelSpeed(Base):
-    __tablename__ = 'wheel_speed'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    time = Column(Integer)
-    speed = Column("speed", Integer)
+#class WheelSpeed(Base):
+#    __tablename__ = 'wheel_speed'
+#    id = Column(Integer, primary_key=True, autoincrement=True)
+#    time = Column(Integer)
+#    speed = Column("speed", Integer)
 
 class Soc(Base):
     __tablename__ = 'soc'
@@ -202,6 +215,7 @@ class CurrentSensor(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
     current_sensor = Column("current_sensor", Integer)
+    voltage_1 = Column("voltage_1", Integer)
 
 class Suspension(Base):
     __tablename__ = 'suspension'
@@ -248,33 +262,33 @@ class Errors(Base):
     error_temperature_inverter = Column("error_temperature_inverter", Integer)
 
 table_mapping = {
+    "apps_speed": Apps,
     "apps_accel": Apps,
-    "apps_brake": Apps,
-    "speed": WheelSpeed,
-    "accel": WheelSpeed,            
-    "soc1": Soc,
-    "soc2": Soc,
-    "steering_angle": SteeringAngle,
+    "temperature_inverter": Temperature,
+    "brake": Apps,
+    "temperature_battery": Temperature,
+    "temperature_motor": Temperature,
+    "power": Inverter,
     "current_sensor": CurrentSensor,
-    "suspension_fr": Suspension,
+    "voltage_1": CurrentSensor,
     "suspension_fl": Suspension,
     "suspension_rr": Suspension,
+    "suspension_fr": Suspension,
     "suspension_rl": Suspension,
-    "sbg_roll": Gyro,
-    "sbg_pitch": Gyro,
-    "sbg_yaw": Gyro,
-    "temperature_motor": Temperature,
-    "temperature_inverter": Temperature,
-    "temperature_battery": Temperature,
-    "inverter_power": Inverter,
-    "error_undervoltage": Errors,
+    "x_gyro": Gyro,
+    "y_gyro": Gyro,
+    "z_gyro": Gyro,
+    "battery_status": Errors,   # battery status treated as error status
     "error_current": Errors,
     "error_voltage": Errors,
+    "error_undervoltage": Errors,
     "error_bspd": Errors,
     "error_soc": Errors,
     "error_temperature_motor": Errors,
     "error_temperature_battery": Errors,
     "error_temperature_inverter": Errors,
+    "soc1": Soc,
+    "soc2": Soc,
 }
 
 
@@ -284,4 +298,3 @@ if __name__ == "__main__":
     main()
     
         
-
