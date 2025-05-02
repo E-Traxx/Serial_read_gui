@@ -1,6 +1,6 @@
 import serial, time,re, random
 
-import sqlite3
+
 
 from flask import Flask, jsonify
 from datetime import datetime
@@ -84,16 +84,15 @@ ID_LENGHTS = {
     }
 }
 
-
 # verarbeitet die ID und jeweilige message in abhängikeit der jeweiligen länge
 
-def process_data(pieces_of_hexa,id_str):           
+def process_data(pieces_of_hexa,id_str, signal):           
 
     temp_position = pieces_of_hexa   #einzelne nachricht in hexa
     details = ID_LENGHTS.get(id_str)    #komplette nachrichten
     messages = details.get('infos')   #infos von länge und art
     
-    result = {}
+    result = {'signal':signal}
 
     index = 0
     for info_lenght, value_description in messages:
@@ -125,7 +124,7 @@ def seperating_data(message):
     hexa_message = parts[2] 
    #hexa_message = parts[-1]                #muss noch geändert werden wenn echte aten kommen
     ids = parts[3]                      # muss überprüft werden
-
+    signal = parts[1]
     #decode again
     #hexa_message = hexa_message.encode('ascii')    !!!! muss dringend geprüft werden
 
@@ -136,7 +135,7 @@ def seperating_data(message):
             total_length_hexa = message['total_length'] // 4        # teilt die bit länge durch 4 um die anzahl an hexa zeichen zu bekommen die er rausfiltern soll
             
             seperated_info = hexa_message[index:index + total_length_hexa]      #durch den index bekommt der den bereich der zeichen 
-            process_data(seperated_info, id_data)                               # hier gibt er den string ab zusammen mit der id
+            process_data(seperated_info, id_data, signal)                               # hier gibt er den string ab zusammen mit der id
 
             index+=total_length_hexa
             
@@ -149,7 +148,7 @@ def main():
        # message = ser.readline().strip()
        # decoded_message = message.decode(encodeing ='ascii', errors ='ignore')
         rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))        #random data
-        test_message = f"2,n,{rand_hex_str},123A49B5678C"                       #random
+        test_message = f"2,100,{rand_hex_str},123A49B5678C"                       #random
        
         seperating_data(test_message)
         push_to_db()
