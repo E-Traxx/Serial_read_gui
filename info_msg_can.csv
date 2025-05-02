@@ -1,0 +1,4 @@
+Name;Message;Multiplexing/Group;Startbit;Length [Bit];Byte Order;Value Type;Initial Value;Factor;Offset;Minimum;Maximum;Unit;Value Table;Comment
+info_ing;info;-;0;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+info_soc;info;-;1;7;Intel;Unsigned;0;1;0;0;127;%;<none>;
+speed;info;-;8;9;Intel;Unsigned;0;0.1;0;0;51.1;m/s;<none>;

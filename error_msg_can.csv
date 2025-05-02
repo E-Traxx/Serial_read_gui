@@ -1,0 +1,11 @@
+Name;Message;Multiplexing/Group;Startbit;Length [Bit];Byte Order;Value Type;Initial Value;Factor;Offset;Minimum;Maximum;Unit;Value Table;Comment
+error_bspd_software;error;-;0;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_can_bus;error;-;1;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_general;error;-;2;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_imd;error;-;3;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_u2_inverter;error;-;4;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_latching;error;-;5;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_temperature;error;-;7;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_undervoltage;error;-;8;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+bms_error;error;-;9;1;Intel;Unsigned;0;1;0;0;1;;<none>;
+error_u1_inverter;error;-;10;1;Intel;Unsigned;0;1;0;0;1;;<none>;

@@ -1,0 +1,4 @@
+Name;Message;Multiplexing/Group;Startbit;Length [Bit];Byte Order;Value Type;Initial Value;Factor;Offset;Minimum;Maximum;Unit;Value Table;Comment
+driver_input_break;driver_input;-;0;7;Intel;Unsigned;0;1;0;0;127;%;<none>;
+driver_input_demanded_throttle;driver_input;-;8;7;Intel;Unsigned;0;1;0;0;127;%;<none>;
+driver_input_steering_angle;driver_input;-;16;8;Intel;Signed;0;1;0;-128;127;%;<none>;

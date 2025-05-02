@@ -1,0 +1,6 @@
+Name;Message;Multiplexing/Group;Startbit;Length [Bit];Byte Order;Value Type;Initial Value;Factor;Offset;Minimum;Maximum;Unit;Value Table;Comment
+temperature_highest_bms;temperature;-;0;7;Intel;Unsigned;0;1;0;0;127;;<none>;
+temperature_u1_motor;temperature;-;8;7;Intel;Unsigned;0;1;0;0;127;°C;<none>;
+temperature_u2_motor;temperature;-;16;7;Intel;Unsigned;0;1;0;0;127;°C;<none>;
+temperature_u1_inverter;temperature;-;24;7;Intel;Unsigned;0;1;0;0;127;°C;<none>;
+temperature_u2_inverter;temperature;-;32;7;Intel;Unsigned;0;1;0;0;127;°C;<none>;
