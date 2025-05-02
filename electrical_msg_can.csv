@@ -1,0 +1,5 @@
+Name;Message;Multiplexing/Group;Startbit;Length [Bit];Byte Order;Value Type;Initial Value;Factor;Offset;Minimum;Maximum;Unit;Value Table;Comment
+voltage_left_inverter;electrical;-;0;10;Intel;Unsigned;0;1;0;0;1023;V;<none>;
+voltage_right_inverter;electrical;-;16;10;Intel;Unsigned;0;1;0;0;1023;V;<none>;
+charge_bms;electrical;-;32;10;Intel;Unsigned;0;0.1;0;0;102.3;;<none>;
+current_bms;electrical;-;48;7;Intel;Unsigned;0;1;0;0;127;Amps;<none>;
