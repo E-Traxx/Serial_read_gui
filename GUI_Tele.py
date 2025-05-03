@@ -161,7 +161,7 @@ app.layout = html.Div(
                             "time": [],
                             **{signal: [] for signal in [
                                 "speed",
-                                "driver_input_brake",
+                                "driver_input_break",
                                 "driver_input_demanded_throttle",
                                 "voltage_left_inverter",
                                 "voltage_right_inverter",
@@ -230,7 +230,7 @@ def update_graphs(data):
         throttle_fig = go.Figure()
         throttle_fig.add_trace(go.Scatter(
             x=index_window, 
-            y=data["driver_input_brake"][-10:], 
+            y=data["driver_input_break"][-10:], 
             name='Bremse', 
             line_color='red'))
         throttle_fig.add_trace(go.Scatter(
@@ -309,10 +309,9 @@ def update_store(n, data):
         "voltage_left_inverter": {"type": float, "factor": 1.0},
         "voltage_right_inverter": {"type": float, "factor": 1.0},
         "current_bms": {"type": float, "factor": 1.0},
-        
-        # Integer-Signale
-        "driver_input_brake": {"type": int},
-        "driver_input_demanded_throttle": {"type": int},
+        # Skaliert auf 0-100%
+        "driver_input_break": {"type": float, "factor": 100/127},
+        "driver_input_demanded_throttle": {"type": float, "factor": 100/127},
         "temperature_highest_bms": {"type": int},
         "temperature_u1_motor": {"type": int},
         "temperature_u2_motor": {"type": int},
