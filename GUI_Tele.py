@@ -303,15 +303,16 @@ def update_store(n, data):
     
     # Signalverarbeitung mit Fehlerbehandlung
     signal_config = {
-        # Float-Signale mit Faktor
-        "speed": {"type": float, "factor": 0.1},
+        # Werte kommen bereits skaliert vom Backend
+        "speed": {"type": float, "factor": 1.0},
         "info_soc": {"type": float, "factor": 1.0},
         "voltage_left_inverter": {"type": float, "factor": 1.0},
         "voltage_right_inverter": {"type": float, "factor": 1.0},
         "current_bms": {"type": float, "factor": 1.0},
-        # Skaliert auf 0-100%
-        "driver_input_break": {"type": float, "factor": 100/127},
-        "driver_input_demanded_throttle": {"type": float, "factor": 100/127},
+
+        # Scale raw 0–127 to 0–100%
+        "driver_input_break": {"type": float, "factor": 100.0/127.0},
+        "driver_input_demanded_throttle": {"type": float, "factor": 100.0/127.0},
         "temperature_highest_bms": {"type": int},
         "temperature_u1_motor": {"type": int},
         "temperature_u2_motor": {"type": int},
@@ -325,7 +326,7 @@ def update_store(n, data):
             if config["type"] == float:
                 value = float(raw_value) * config.get("factor", 1.0)
             else:
-                value = int(float(raw_value))  # Sicherere Konvertierung
+                value = int(float(raw_value))  
             data[signal].append(value)
         except:
             data[signal].append(0)
@@ -382,7 +383,7 @@ def update_indicators(data):
     for key, title, unit, color in indicators:
         try:
             value = data[key][-1] if data[key] else 0
-            # Größere Schrift speziell für SOC
+         
             number_size = 50 if key == 'info_soc' else 40
             fig = go.Figure(go.Indicator(
                 mode="number+delta",
@@ -391,7 +392,7 @@ def update_indicators(data):
                 title={"text": title, "font": {"color": "white", "size": 16}},
                 delta={'reference': data[key][-2] if len(data[key]) > 1 else 0}
             ))
-            # Add hover/boxShadow style
+           
             fig.update_layout(**DARK_LAYOUT)
             fig.update_layout(
                 margin=dict(l=10, r=10, t=30, b=10),
