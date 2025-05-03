@@ -1,3 +1,12 @@
+#
+# ---------------------- Design Tokens ----------------------
+FONT_FAMILY = "Inter, Roboto, Arial, sans-serif"
+GRID_COLOR  = "#555"   # etwas heller als #444
+SPACING_4   = "4px"
+SPACING_8   = "8px"
+SPACING_16  = "16px"
+SPACING_32  = "32px"
+# -----------------------------------------------------------
 import dash
 from dash import html, dcc, callback, Input, Output, State
 import plotly.express as px
@@ -27,37 +36,93 @@ ERROR_SIGNALS = [
 DARK_LAYOUT = {
     'plot_bgcolor': '#2a2a2a',
     'paper_bgcolor': '#2a2a2a',
-    'font': {'color': 'white'},
-    'xaxis': {'showgrid': False, 'tickformat': '%H:%M:%S'},
-    'yaxis': {'showgrid': False},
-    'margin': dict(l=20, r=20, t=40, b=20)
+    'font': {'color': 'white', 'family': FONT_FAMILY},
+    'xaxis': {'showgrid': True, 'gridcolor': GRID_COLOR, 'gridwidth': 0.5, 'tickformat': '%H:%M:%S'},
+    'yaxis': {'showgrid': True, 'gridcolor': GRID_COLOR, 'gridwidth': 0.5},
+    'margin': dict(l=20, r=20, t=60, b=20)
 }
+
+# Card Style für alle Graphen
+GRAPH_STYLE = {'borderRadius': '15px', 'overflow': 'hidden'}
+
+# Helper to improve axis readability
+def apply_axis_style(fig):
+    fig.update_xaxes(
+        title_text='',
+        tickangle=-30,
+        ticks="outside",
+        tickfont=dict(size=10),
+        showgrid=True,
+        gridcolor="#444",
+        dtick=1  # one tick per measurement
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=10),
+        ticks="outside",
+        showgrid=True,
+        gridcolor="#444"
+    )
+
+# Helper to put legends above the plots
+def place_legend_top(fig):
+    fig.update_layout(
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='center',
+            x=0.5,
+            font=dict(size=10),
+            bgcolor='rgba(0,0,0,0)'
+        )
+    )
 
 app.layout = html.Div(
     children=[
-        # Fehler-LEDs
+        # Fehler‑LED‑Bar (mit Klartext)
         html.Div(
             children=[
                 html.Div(
-                    id=f"led{i}",
+                    children=[
+                        html.Div(
+                            id=f"led_{err}",
+                            style={
+                                "backgroundColor": "#00ff00",
+                                "width": "24px",
+                                "height": "24px",
+                                "borderRadius": "50%",
+                                "boxShadow": "0 0 12px #00ff00",
+                                "transition": "all 0.25s ease"
+                            },
+                        ),
+                        html.Span(
+                            err.replace("_", " "),
+                            style={
+                                "marginTop": "4px",
+                                "fontSize": "11px",
+                                "color": "white",
+                                "whiteSpace": "nowrap",
+                            },
+                        ),
+                    ],
                     style={
-                        "backgroundColor": "#00ff00",
-                        "width": "30px",
-                        "height": "30px",
-                        "borderRadius": "50%",
-                        "boxShadow": "0 0 15px rgb(255, 255, 0)",
-                    }
-                ) for i in range(1, 11)
+                        "display": "flex",
+                        "flexDirection": "column",
+                        "alignItems": "center",
+                        "minWidth": "80px",
+                    },
+                )
+                for err in ERROR_SIGNALS
             ],
             style={
-                "display": "grid",
-                "gridTemplateColumns": "repeat(10, 1fr)",
-                "gap": "15px",
-                "margin": "20px 0",
+                "display": "flex",
+                "justifyContent": "center",
+                "gap": SPACING_32,
+                "margin": f"{SPACING_16} 0",
                 "padding": "10px",
                 "background": "#2a2a2a",
-                "borderRadius": "15px"
-            }
+                "borderRadius": "15px",
+            },
         ),
 
         dcc.Interval(id='interval-component', interval=1000, n_intervals=0),
@@ -68,13 +133,29 @@ app.layout = html.Div(
                 # Linke Spalte
                 html.Div(
                     children=[
-                        dcc.Graph(id='speed-graph', style={'height': '300px', 'borderRadius': '15px'}),
+                        dcc.Graph(id='speed-graph', style={'height': '300px', **GRAPH_STYLE, 'marginBottom': '30px'}),
                         html.Div(
                             children=[
-                                dcc.Graph(id='throttle-brake-graph', style={'flex': 1, 'borderRadius': '15px'}),
-                                dcc.Graph(id='inverter-graph', style={'flex': 1, 'borderRadius': '15px'}),
+                                dcc.Graph(id='throttle-brake-graph', style={'flex': 1, **GRAPH_STYLE}),
+                                dcc.Graph(id='inverter-graph', style={'flex': 1, **GRAPH_STYLE}),
                             ],
-                            style={'display': 'flex', 'gap': '20px', 'height': '300px'}
+                            style={'display': 'flex', 'gap': SPACING_32, 'height': '300px'}
+                        ),
+                        # KPI‑Tiles kompakt (unter den Hauptcharts)
+                        html.Div(
+                            children=[
+                                dcc.Graph(id='speed-text', style={'height': '180px', **GRAPH_STYLE}),
+                                dcc.Graph(id='motor-temp-text', style={'height': '180px', **GRAPH_STYLE}),
+                                dcc.Graph(id='inverter-temp-text', style={'height': '180px', **GRAPH_STYLE}),
+                                dcc.Graph(id='soc-text', style={'height': '180px', **GRAPH_STYLE}),
+                            ],
+                            style={
+                                'display': 'grid',
+                                'gridTemplateColumns': 'repeat(2, 1fr)',
+                                'gridAutoRows': '1fr',
+                                'gap': SPACING_16,
+                                'marginTop': '20px'
+                            }
                         ),
                         dcc.Store(id='data-store', data={
                             "time": [],
@@ -95,37 +176,29 @@ app.layout = html.Div(
                             **{error: [] for error in ERROR_SIGNALS}
                         }),
                     ],
-                    style={'width': '65%', 'paddingRight': '20px'}
+                    style={'width': '70%', 'paddingRight': '20px'}
                 ),
 
                 # Rechte Spalte
                 html.Div(
                     children=[
-                        dcc.Graph(id='temp-graph', style={'height': '400px', 'borderRadius': '15px'}),
-                        dcc.Graph(id='soc-graph', style={'height': '300px', 'borderRadius': '15px', 'marginTop': '20px'}),
+                        dcc.Graph(id='motor-temp-graph', style={'height': '300px', **GRAPH_STYLE}),
+                        dcc.Graph(id='inv-temp-graph', style={'height': '300px', **GRAPH_STYLE, 'marginTop': '20px'}),
+                        dcc.Graph(id='soc-graph', style={'height': '260px', **GRAPH_STYLE, 'marginTop': '20px'}),
                     ],
                     style={'width': '35%'}
                 )
             ],
-            style={'display': 'flex', 'gap': '20px'}
+            style={'display': 'flex', 'gap': SPACING_16}
         ),
 
-        # Status-Indikatoren
-        html.Div(
-            children=[
-                dcc.Graph(id='speed-text', style={'width': '24%', 'height': '150px'}),
-                dcc.Graph(id='motor-temp-text', style={'width': '24%', 'height': '150px'}),
-                dcc.Graph(id='inverter-temp-text', style={'width': '24%', 'height': '150px'}),
-                dcc.Graph(id='soc-text', style={'width': '24%', 'height': '150px'}),
-            ],
-            style={'display': 'flex', 'gap': '10px', 'marginTop': '20px'}
-        )
     ],
     style={
         "backgroundColor": "#1a1a1a",
         "color": "white",
         "padding": "20px",
-        "minHeight": "100vh"
+        "minHeight": "100vh",
+        "fontFamily": FONT_FAMILY
     }
 )
 
@@ -135,6 +208,87 @@ def fetch_data():
         return response.json() if response.ok else {}
     except:
         return {}
+
+@app.callback(
+    [Output('speed-graph', 'figure'),
+     Output('throttle-brake-graph', 'figure'),
+     Output('inverter-graph', 'figure'),
+     Output('motor-temp-graph', 'figure'),
+     Output('inv-temp-graph', 'figure'),
+     Output('soc-graph', 'figure')],
+    Input('data-store', 'data')
+)
+def update_graphs(data):
+    try:
+        index_window = list(range(len(data["time"])))[-10:]
+        
+        # Geschwindigkeitsgraph
+        speed_fig = px.line(x=index_window, y=data["speed"][-10:], title="Geschwindigkeit (km/h)")
+        speed_fig.update_traces(line_color='#00ff00')
+        
+        # Bremse/Gaspedal
+        throttle_fig = go.Figure()
+        throttle_fig.add_trace(go.Scatter(
+            x=index_window, 
+            y=data["driver_input_brake"][-10:], 
+            name='Bremse', 
+            line_color='red'))
+        throttle_fig.add_trace(go.Scatter(
+            x=index_window,
+            y=data["driver_input_demanded_throttle"][-10:],
+            name='Gaspedal',
+            line_color='green'))
+        throttle_fig.update_yaxes(range=[0, 100])
+        
+        # Inverter-Spannungen
+        inverter_fig = go.Figure()
+        inverter_fig.add_trace(go.Scatter(
+            x=index_window,
+            y=data["voltage_left_inverter"][-10:],
+            name='Inv L (V)',
+            line_color='blue'))
+        inverter_fig.add_trace(go.Scatter(
+            x=index_window,
+            y=data["voltage_right_inverter"][-10:],
+            name='Inv R (V)',
+            line_color='orange'))
+        
+        # Motor‐ und BMS‐Temperaturen
+        motor_temp_fig = go.Figure()
+        motor_temp_fig.add_trace(go.Scatter(x=index_window, y=data["temperature_u1_motor"][-10:], name='Motor U1 (°C)', line_color='#ff6600'))
+        motor_temp_fig.add_trace(go.Scatter(x=index_window, y=data["temperature_u2_motor"][-10:], name='Motor U2 (°C)', line_color='#ffff00'))
+        motor_temp_fig.add_trace(go.Scatter(x=index_window, y=data["temperature_highest_bms"][-10:], name='BMS max (°C)', line_color='#ff2b2b'))
+
+        # Inverter‐Temperaturen
+        inv_temp_fig = go.Figure()
+        inv_temp_fig.add_trace(go.Scatter(x=index_window, y=data["temperature_u1_inverter"][-10:], name='Inv U1 (°C)', line_color='#ff00ff'))
+        inv_temp_fig.add_trace(go.Scatter(x=index_window, y=data["temperature_u2_inverter"][-10:], name='Inv U2 (°C)', line_color='#ffa500'))
+        
+        # SOC
+        soc_fig = px.line(x=index_window, y=data["info_soc"][-10:], title="State of Charge (%)")
+        soc_fig.update_traces(line_color='#00ff00')
+        
+        # Layout anwenden
+        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+            fig.update_layout(**DARK_LAYOUT)
+        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+            apply_axis_style(fig)
+        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+            place_legend_top(fig)
+        
+        # Einheitliche Achsenbeschriftungen
+        speed_fig.update_yaxes(title_text="km/h")
+        throttle_fig.update_yaxes(title_text="%")
+        inverter_fig.update_yaxes(title_text="V / A")
+        motor_temp_fig.update_yaxes(title_text="°C")
+        inv_temp_fig.update_yaxes(title_text="°C")
+        soc_fig.update_yaxes(title_text="%")
+        
+        return speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig
+    
+    except Exception as e:
+        print(f"Graph Error: {e}")
+        return [go.Figure(layout=DARK_LAYOUT) for _ in range(6)]
 
 @app.callback(
     Output('data-store', 'data'),
@@ -192,7 +346,7 @@ def update_store(n, data):
     return data
 
 @app.callback(
-    [Output(f'led{i}', 'style') for i in range(1, 11)],
+    [Output(f'led_{err}', 'style') for err in ERROR_SIGNALS],
     Input('data-store', 'data')
 )
 def update_leds(data):
@@ -202,81 +356,13 @@ def update_leds(data):
         color = "red" if error_value == 1 else "#00ff00"
         styles.append({
             "backgroundColor": color,
-            "width": "30px",
-            "height": "30px",
+            "width": "24px",
+            "height": "24px",
             "borderRadius": "50%",
-            "boxShadow": f"0 0 15px {color}"
+            "boxShadow": f"0 0 12px {color}",
+            "transition": "all 0.25s ease"
         })
     return styles
-
-@app.callback(
-    [Output('speed-graph', 'figure'),
-     Output('throttle-brake-graph', 'figure'),
-     Output('inverter-graph', 'figure'),
-     Output('temp-graph', 'figure'),
-     Output('soc-graph', 'figure')],
-    Input('data-store', 'data')
-)
-def update_graphs(data):
-    try:
-        time_window = data["time"][-20:]
-        
-        # Geschwindigkeitsgraph
-        speed_fig = px.line(x=time_window, y=data["speed"][-20:], title="Geschwindigkeit (km/h)")
-        speed_fig.update_traces(line_color='#00ff00')
-        
-        # Bremse/Gaspedal
-        throttle_fig = go.Figure()
-        throttle_fig.add_trace(go.Scatter(
-            x=time_window, 
-            y=data["driver_input_brake"][-20:], 
-            name='Bremse', 
-            line_color='red'))
-        throttle_fig.add_trace(go.Scatter(
-            x=time_window,
-            y=data["driver_input_demanded_throttle"][-20:],
-            name='Gaspedal',
-            line_color='green'))
-        
-        # Inverter-Spannungen
-        inverter_fig = go.Figure()
-        inverter_fig.add_trace(go.Scatter(
-            x=time_window,
-            y=data["voltage_left_inverter"][-20:],
-            name='Links',
-            line_color='blue'))
-        inverter_fig.add_trace(go.Scatter(
-            x=time_window,
-            y=data["voltage_right_inverter"][-20:],
-            name='Rechts',
-            line_color='orange'))
-        
-        # Temperaturen
-        temp_fig = go.Figure()
-        temp_fig.add_trace(go.Scatter(
-            x=time_window,
-            y=data["temperature_u1_motor"][-20:],
-            name='Motor U1',
-            line_color='#ff00ff'))
-        temp_fig.add_trace(go.Scatter(
-            x=time_window,
-            y=data["temperature_u1_inverter"][-20:],
-            name='Inverter U1',
-            line_color='#00ffff'))
-        
-        # SOC
-        soc_fig = px.line(x=time_window, y=data["info_soc"][-20:], title="Ladezustand (%)")
-        soc_fig.update_traces(line_color='#00ff00')
-        
-        # Layout anwenden
-        for fig in [speed_fig, throttle_fig, inverter_fig, temp_fig, soc_fig]:
-            fig.update_layout(**DARK_LAYOUT)
-        
-        return speed_fig, throttle_fig, inverter_fig, temp_fig, soc_fig
-    
-    except Exception as e:
-        print(f"Graph Error: {e}")
-        return [go.Figure(layout=DARK_LAYOUT) for _ in range(5)]
 
 @app.callback(
     [Output('speed-text', 'figure'),
@@ -297,19 +383,25 @@ def update_indicators(data):
     for key, title, unit, color in indicators:
         try:
             value = data[key][-1] if data[key] else 0
+            # Größere Schrift speziell für SOC
+            number_size = 50 if key == 'info_soc' else 40
             fig = go.Figure(go.Indicator(
                 mode="number+delta",
                 value=value,
-                number={"suffix": f" {unit}", "font": {"color": color, "size": 40}},
+                number={"suffix": f" {unit}", "font": {"color": color, "size": number_size}},
                 title={"text": title, "font": {"color": "white", "size": 16}},
                 delta={'reference': data[key][-2] if len(data[key]) > 1 else 0}
             ))
+            # Add hover/boxShadow style
             fig.update_layout(**DARK_LAYOUT)
+            fig.update_layout(
+                margin=dict(l=10, r=10, t=30, b=10),
+                paper_bgcolor='#2a2a2a',
+            )
             figs.append(fig)
         except:
             figs.append(go.Figure(layout=DARK_LAYOUT))
-    
     return tuple(figs)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8050)
+    app.run_server(debug=True, port=8050)
