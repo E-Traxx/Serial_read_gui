@@ -1,12 +1,10 @@
-#
-# ---------------------- Design Tokens ----------------------
 FONT_FAMILY = "Inter, Roboto, Arial, sans-serif"
 GRID_COLOR  = "#555"   # etwas heller als #444
 SPACING_4   = "4px"
 SPACING_8   = "8px"
 SPACING_16  = "16px"
 SPACING_32  = "32px"
-# -----------------------------------------------------------
+
 import dash
 from dash import html, dcc, callback, Input, Output, State
 import plotly.express as px
@@ -133,7 +131,13 @@ app.layout = html.Div(
                 # Linke Spalte
                 html.Div(
                     children=[
-                        dcc.Graph(id='speed-graph', style={'height': '300px', **GRAPH_STYLE, 'marginBottom': '30px'}),
+                        html.Div(
+                            children=[
+                                dcc.Graph(id='speed-graph', style={'flex': 1, 'height': '300px', **GRAPH_STYLE}),
+                                dcc.Graph(id='bms-graph',   style={'flex': 1, 'height': '300px', **GRAPH_STYLE}),
+                            ],
+                            style={'display': 'flex', 'gap': SPACING_32, 'marginBottom': '30px'}
+                        ),
                         html.Div(
                             children=[
                                 dcc.Graph(id='throttle-brake-graph', style={'flex': 1, **GRAPH_STYLE}),
@@ -171,7 +175,8 @@ app.layout = html.Div(
                                 "temperature_u1_inverter",
                                 "temperature_u2_inverter",
                                 "info_soc",
-                                "current_bms"
+                                "current_bms",
+                                "charge_bms"
                             ]},
                             **{error: [] for error in ERROR_SIGNALS}
                         }),
@@ -184,7 +189,7 @@ app.layout = html.Div(
                     children=[
                         dcc.Graph(id='motor-temp-graph', style={'height': '300px', **GRAPH_STYLE}),
                         dcc.Graph(id='inv-temp-graph', style={'height': '300px', **GRAPH_STYLE, 'marginTop': '20px'}),
-                        dcc.Graph(id='soc-graph', style={'height': '260px', **GRAPH_STYLE, 'marginTop': '20px'}),
+                        dcc.Graph(id='soc-graph', style={'height': '420px', **GRAPH_STYLE, 'marginTop': '20px'}),
                     ],
                     style={'width': '35%'}
                 )
@@ -211,6 +216,7 @@ def fetch_data():
 
 @app.callback(
     [Output('speed-graph', 'figure'),
+     Output('bms-graph',   'figure'),
      Output('throttle-brake-graph', 'figure'),
      Output('inverter-graph', 'figure'),
      Output('motor-temp-graph', 'figure'),
@@ -225,6 +231,20 @@ def update_graphs(data):
         # Geschwindigkeitsgraph
         speed_fig = px.line(x=index_window, y=data["speed"][-10:], title="Geschwindigkeit (km/h)")
         speed_fig.update_traces(line_color='#00ff00')
+        
+        # BMS Charge & Current
+        bms_fig = go.Figure()
+        bms_fig.add_trace(go.Scatter(
+            x=index_window,
+            y=data["charge_bms"][-10:],
+            name='Charge (Ah)',
+            line_color='#00ffff'))
+        bms_fig.add_trace(go.Scatter(
+            x=index_window,
+            y=data["current_bms"][-10:],
+            name='Current (A)',
+            line_color='#ffffff'))
+        bms_fig.update_yaxes(title_text="Ah / A")
         
         # Bremse/Gaspedal
         throttle_fig = go.Figure()
@@ -269,11 +289,11 @@ def update_graphs(data):
         soc_fig.update_traces(line_color='#00ff00')
         
         # Layout anwenden
-        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+        for fig in [speed_fig, bms_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
             fig.update_layout(**DARK_LAYOUT)
-        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+        for fig in [speed_fig, bms_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
             apply_axis_style(fig)
-        for fig in [speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
+        for fig in [speed_fig, bms_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig]:
             place_legend_top(fig)
         
         # Einheitliche Achsenbeschriftungen
@@ -284,11 +304,11 @@ def update_graphs(data):
         inv_temp_fig.update_yaxes(title_text="°C")
         soc_fig.update_yaxes(title_text="%")
         
-        return speed_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig
+        return speed_fig, bms_fig, throttle_fig, inverter_fig, motor_temp_fig, inv_temp_fig, soc_fig
     
     except Exception as e:
         print(f"Graph Error: {e}")
-        return [go.Figure(layout=DARK_LAYOUT) for _ in range(6)]
+        return [go.Figure(layout=DARK_LAYOUT) for _ in range(7)]
 
 @app.callback(
     Output('data-store', 'data'),
@@ -309,6 +329,7 @@ def update_store(n, data):
         "voltage_left_inverter": {"type": float, "factor": 1.0},
         "voltage_right_inverter": {"type": float, "factor": 1.0},
         "current_bms": {"type": float, "factor": 1.0},
+        "charge_bms": {"type": float, "factor": 1.0},
 
         # Scale raw 0–127 to 0–100%
         "driver_input_break": {"type": float, "factor": 100.0/127.0},
