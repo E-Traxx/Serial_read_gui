@@ -88,7 +88,8 @@ def main():
         
         # Erzeuge einen Zufalls-Hex-String in der korrekten Länge
         rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
-        test_message = f"2,100,2,{id_},{rand_hex_str}"
+        test_message = f"2,100,2,4,{rand_hex_str}"
+    
         process_information(test_message)
         print(latest_data)
         #print(latest_data)
@@ -109,20 +110,24 @@ def push_to_db():
         row_cache: dict[type, Base] = {}
 
         for key, val_str in latest_data.items():
-            # Skip if value hasn't changed since last DB write
-            if logged_snapshot.get(key) == val_str:
+
+            # Skip unchanged values, except when the value is 0 or 1
+            try:
+                numeric_val = float(val_str)
+            except ValueError:
+                numeric_val = None
+
+            if numeric_val not in (0.0, 1.0) and logged_snapshot.get(key) == val_str:
                 continue
             logged_snapshot[key] = val_str
 
             TableCls = table_mapping.get(key)
             if not TableCls:
-                continue   # ignore unmapped keys
+                continue  
 
-            # create row for this table if not yet cached
             if TableCls not in row_cache:
                 row_cache[TableCls] = TableCls(time=ts)
 
-            # safe numeric conversion
             try:
                 val = float(val_str)
             except ValueError:
@@ -131,7 +136,7 @@ def push_to_db():
             setattr(row_cache[TableCls], key, val)
 
         if not row_cache:
-            return  # nothing new -> skip INSERT
+            return  
 
    
         session.add_all(row_cache.values())
