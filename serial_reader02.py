@@ -1,12 +1,8 @@
 import serial, time,re, random
 import pandas as pd
-
-
 from flask import Flask, jsonify
-from datetime import datetime
 from random import randint
 from threading import Thread
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Unicode, String, MetaData, Float 
 from sqlalchemy import create_engine
@@ -40,28 +36,31 @@ latest_data = { }
 logged_snapshot = {}
 
 CSV_ID ={
-    "1": "electrical_msg_can.csv",
-    "2": "info_msg_can.csv",
-    "3": "driver_input_msg_can.csv",
-    "4": "error_msg_can.csv",
-    "5": "temperature_msg_can.csv",}
+    "424": "electrical_msg_can.csv",
+    "421": "info_msg_can.csv",
+    "423": "driver_input_msg_can.csv",
+    "420": "error_msg_can.csv",
+    "422": "temperature_msg_can.csv",}
 
 
-def process_information(message):
-    global latest_data
-    parts = message.split(",")
-    ID = parts[3].strip()
-    hexa_message = parts[-1]
-    binary_message = format(int(hexa_message, 16), f'0{len(hexa_message)*4}b')
+def process_information(frame):
+    frame = frame.strip()
+
+  
+    id_hex      = frame[:4]               
+    ID          = id_hex.lstrip("0").upper() or "0"   
+    payload_hex = frame[4:]                
+
+    
+
+    binary_message = format(int(payload_hex, 16), f'0{len(payload_hex)*4}b')
     
     csv_information = {}
     ID_file = CSV_ID.get(ID)
             
     try:
-        
         csv_file = pd.read_csv(ID_file, sep=";", encoding="utf-8")
     except UnicodeDecodeError:
-
         csv_file = pd.read_csv(ID_file, sep=";", encoding="latin1")
 
     for _, row in csv_file.iterrows():
@@ -77,22 +76,49 @@ def process_information(message):
 
         latest_data[name] =  f"{computed_value:.2f}"
 
+
+
 def main():
 
     while True:
-       # message = ser.readline().strip()
-       # decoded_message = message.decode(encodeing ='ascii', errors ='ignore')
-        # Wähle zufällige Frame-ID basierend auf den verfügbaren IDs
-        id_ = random.choice(list(CSV_ID.keys()))
-        # Bestimme die benötigte Hex-Länge aus total_length (Bits → Nibbles)
-        
-        # Erzeuge einen Zufalls-Hex-String in der korrekten Länge
+
+       # raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+#
+       # if not raw.upper().startswith("AT+P2PUNICASTTX="):
+       #     continue
+#
+       # stored_frame = raw
+       # status = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+#
+       # if status.upper() == "OK":
+       #     
+       #     payload = stored_frame.split('=', 1)[1]            
+       #     process_information(payload)
+       #     push_to_db()
+#
+       # elif status == "AT_DUTYCYCLE_RESTRICTED":
+       #     ser.write(b"ATZ\r\n")
+       #     time.sleep(1.5)
+#
+       # else:
+       #     print("unerwartet komisch hmm... Neustart")
+       #     ser.write(b"ATZ\r\n")
+       #     time.sleep(1.5)
+            
+
+
+
+        id_hex_raw = random.choice(list(CSV_ID.keys()))   
+        id_hex     = f"{int(id_hex_raw, 16):04X}"         
         rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
-        test_message = f"2,100,2,4,{rand_hex_str}"
+
+        test_message = f"AT+P2PUNICASTTX={id_hex}{rand_hex_str}"
     
-        process_information(test_message)
+        payload = test_message.split('=', 1)[1]            
+        process_information(payload)
+
         print(latest_data)
-        #print(latest_data)
+
         push_to_db()
         time.sleep(0.5)
 
@@ -101,7 +127,9 @@ def main():
 def transfer_data():
     return jsonify(latest_data)
 
-    
+
+
+#regelt die Datenübergabe und checkt nach wiederholungen, check?    
 def push_to_db():
   
     session = Session()
@@ -111,7 +139,7 @@ def push_to_db():
 
         for key, val_str in latest_data.items():
 
-            # Skip unchanged values, except when the value is 0 or 1
+            
             try:
                 numeric_val = float(val_str)
             except ValueError:
@@ -204,7 +232,7 @@ class Errors(Base):
 
 
 
-table_mapping: dict[str, Base] = {
+table_mapping = {
     
     "driver_input_demanded_throttle": Apps,
     "driver_input_break": Apps,
