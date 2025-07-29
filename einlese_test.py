@@ -61,42 +61,12 @@ def main():
 
     while True:
 
-       # raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
-#
-       # if not raw.upper().startswith("AT+P2PUNICASTTX="):
-       #     continue
-#
-       # stored_frame = raw
-       # status = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
-#
-       # if status.upper() == "OK":
-       #     
-       #     payload = stored_frame.split('=', 1)[1]            
-       #     process_information(payload)
-       #     push_to_db()
-#
-       # elif status == "AT_DUTYCYCLE_RESTRICTED":
-       #     ser.write(b"ATZ\r\n")
-       #     time.sleep(1.5)
-#
-       # else:
-       #     print("unerwartet komisch hmm... Neustart")
-       #     ser.write(b"ATZ\r\n")
-       #     time.sleep(1.5)
-            
-        id_hex_raw = random.choice(list(CSV_ID.keys()))   
-        id_hex     = f"{int(id_hex_raw, 16):04X}"         
-        rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
-
-        test_message = f"AT+P2PUNICASTTX={id_hex}{rand_hex_str}"
-    
-        payload = test_message.split('=', 1)[1]            
+        raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+        payload = raw.split(',')[-1]       
         process_information(payload)
-
         print(latest_data)
-
-
-        time.sleep(0.5)
+        push_to_db()
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
