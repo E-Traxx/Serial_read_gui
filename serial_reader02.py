@@ -32,7 +32,6 @@ app = Flask(__name__)
 
 
 latest_data = { }
-
 logged_snapshot = {}
 
 CSV_ID ={
@@ -82,7 +81,23 @@ def main():
 
     while True:
 
-       # raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+        raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+
+
+        payload = raw.split(',')[-1]       
+        process_information(payload)
+
+        print(latest_data)
+
+        push_to_db()
+        time.sleep(1)
+
+
+
+
+
+
+        
 #
        # if not raw.upper().startswith("AT+P2PUNICASTTX="):
        #     continue
@@ -108,19 +123,13 @@ def main():
 
 
 
-        id_hex_raw = random.choice(list(CSV_ID.keys()))   
-        id_hex     = f"{int(id_hex_raw, 16):04X}"         
-        rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
+        #id_hex_raw = random.choice(list(CSV_ID.keys()))   
+        #id_hex     = f"{int(id_hex_raw, 16):04X}"         
+        #rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
 
-        test_message = f"AT+P2PUNICASTTX={id_hex}{rand_hex_str}"
-    
-        payload = test_message.split('=', 1)[1]            
-        process_information(payload)
-
-        print(latest_data)
-
-        push_to_db()
-        time.sleep(0.5)
+        #test_message = f"+cast2:3:2,{id_hex}{rand_hex_str}"
+        #payload = test_message.split(',')[-1]     
+     
 
 
 @app.route('/incoming_data', methods=['GET'])
