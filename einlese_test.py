@@ -58,14 +58,16 @@ def process_information(frame):
 
 
 def main():
+    ser = serial.Serial(serial_port, baudrate, timeout=1)
 
     while True:
-
         raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
-        payload = raw.split(',')[-1]       
+        if not raw:         
+            continue
+        payload = raw.split(',')[-1]
         process_information(payload)
         print(latest_data)
-        push_to_db()
+     
         time.sleep(1)
 
 if __name__ == "__main__":
