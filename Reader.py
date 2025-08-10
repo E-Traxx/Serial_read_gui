@@ -64,14 +64,14 @@ def process_information(frame,signal):
 
     for _, row in csv_file.iterrows():
 
-        name   = row["Name"]
-        start  = int(row["Startbit"])
-        length = int(row["Length [Bit]"])
-        factor = float(row["Factor"])
+        name              = row["Name"]
+        start             = int(row["Startbit"])
+        length            = int(row["Length [Bit]"])
+        factor            = float(row["Factor"])
 
-        binary_value   = binary_message[start:start+length]                                     
-        decimal_value  = int(binary_value, 2)                                                       #kann man maybe durch in(value,16) ersetzen, aber läuft so auch
-        computed_value = decimal_value * factor
+        binary_value      = binary_message[start:start+length]                                     
+        decimal_value     = int(binary_value, 2)                                                       #kann man maybe durch in(value,16) ersetzen, aber läuft so auch
+        computed_value    = decimal_value * factor
 
         latest_data[name] =  f"{computed_value:.2f}"                                                #übergibt namen aus CSV und Wert in latest_data, damit GUI die Daten bekommt
 
@@ -164,45 +164,45 @@ class Apps(Base):
 class Speed(Base):
     __tablename__ = 'info'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    time     = Column(Integer)
-    speed    = Column(Float)                            
-    info_soc = Column(Float)
-    info_ing = Column(Integer)
+    time                           = Column(Integer)
+    speed                          = Column(Float)                            
+    info_soc                       = Column(Float)
+    info_ing                       = Column(Integer)
 
 class Temperature(Base):
     __tablename__ = 'temperature'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    temperature_u1_motor    = Column(Float)
-    temperature_u2_motor    = Column(Float)
-    temperature_u1_inverter = Column(Float)
-    temperature_u2_inverter = Column(Float)
-    temperature_highest_bms = Column(Float)
+    temperature_u1_motor           = Column(Float)
+    temperature_u2_motor           = Column(Float)
+    temperature_u1_inverter        = Column(Float)
+    temperature_u2_inverter        = Column(Float)
+    temperature_highest_bms        = Column(Float)
 
 class Inverter(Base):
     __tablename__ = 'inverter'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    voltage_left_inverter  = Column(Float)           # V
-    voltage_right_inverter = Column(Float)           # V
-    current_bms            = Column(Float)           # A
-    charge_bms             = Column(Float)           # Ah
+    voltage_left_inverter          = Column(Float)           # V
+    voltage_right_inverter         = Column(Float)           # V
+    current_bms                    = Column(Float)           # A
+    charge_bms                     = Column(Float)           # Ah
 
 
 class Errors(Base):
     __tablename__ = 'errors'
     id = Column(Integer, primary_key=True, autoincrement=True)
     time = Column(Integer)
-    error_bspd_software   = Column(Integer)
-    error_can_bus         = Column(Integer)
-    error_general         = Column(Integer)
-    error_imd             = Column(Integer)
-    error_u2_inverter     = Column(Integer)
-    error_latching        = Column(Integer)
-    error_temperature     = Column(Integer)
-    error_undervoltage    = Column(Integer)
-    bms_error             = Column(Integer)
-    error_u1_inverter     = Column(Integer)
+    error_bspd_software            = Column(Integer)
+    error_can_bus                  = Column(Integer)
+    error_general                  = Column(Integer)
+    error_imd                      = Column(Integer)
+    error_u2_inverter              = Column(Integer)
+    error_latching                 = Column(Integer)
+    error_temperature              = Column(Integer)
+    error_undervoltage             = Column(Integer)
+    bms_error                      = Column(Integer)
+    error_u1_inverter              = Column(Integer)
 
 
 
