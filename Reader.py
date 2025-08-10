@@ -3,31 +3,30 @@ import pandas as pd
 from flask import Flask, jsonify
 from random import randint
 from threading import Thread
-from sqlalchemy.orm import declarative_base  # <-- change this import
+from sqlalchemy.orm import declarative_base  
 #from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Unicode, String, MetaData, Float 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-baudrate = 9600
-serial_port = "COM4"  
-user = 'Exxe25'
-password = 'Etraxx_25'
-host = 'localhost'
-database = 'database_etraxx'
-port = "3306"
+baudrate        = 9600
+serial_port     = "COM4"  
+user            = 'Exxe25'
+password        = 'Etraxx_25'
+host            = 'localhost'
+database        = 'database_etraxx'
+port            = "3306"
+ 
+connection_url  = f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
+engine          = create_engine(connection_url, echo=True)
+Base            = declarative_base()
+Session         = sessionmaker(bind=engine)
+app             = Flask(__name__)
 
+latest_data     = {}                                                                        #GUI bezieht daraus die Daten
+logged_snapshot = {}                                                                        #zusätzliches Dictionary, um doppelte Einträge zu vermeiden. Deswegen NULL-Werte wenn doppelte auftauchen, blöd bei den errors :(
 
-connection_url= f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
-engine = create_engine(connection_url, echo=True)
-Base = declarative_base()
-Session = sessionmaker(bind=engine)
-app = Flask(__name__)
-latest_data = { }
-
-logged_snapshot = {}
-
-CSV_ID ={
+CSV_ID = {
     #"4240": "electrical_msg_can.csv",
     "1F10": "electrical_msg_can.csv",
     #"4210": "info_msg_can.csv",
@@ -40,24 +39,24 @@ CSV_ID ={
     "41D0": "temperature_msg_can.csv",}
 
 
-def process_information(frame):
+def process_information(frame,signal):
     frame = frame.strip()
     if len(frame) <= 4:
         return
 
-  
     id_hex      = frame[:4]               
     ID          = id_hex.lstrip("0").upper() or "0"   
-    payload_hex = frame[4:]                
-
+    payload_hex = frame[4:]      
     
-
+    latest_data['signal_info'] = int(signal, 16)                                                 # Signal Information
+    
     binary_message = format(int(payload_hex, 16), f'0{len(payload_hex)*4}b')
     
     csv_information = {}
     ID_file = CSV_ID.get(ID)
     if not ID_file:
         return        
+
     try:
         csv_file = pd.read_csv(ID_file, sep=";", encoding="utf-8")
     except UnicodeDecodeError:
@@ -70,11 +69,11 @@ def process_information(frame):
         length = int(row["Length [Bit]"])
         factor = float(row["Factor"])
 
-        binary_value = binary_message[start:start+length]
-        decimal_value = int(binary_value, 2)
+        binary_value   = binary_message[start:start+length]                                     
+        decimal_value  = int(binary_value, 2)                                                       #kann man maybe durch in(value,16) ersetzen, aber läuft so auch
         computed_value = decimal_value * factor
 
-        latest_data[name] =  f"{computed_value:.2f}"
+        latest_data[name] =  f"{computed_value:.2f}"                                                #übergibt namen aus CSV und Wert in latest_data, damit GUI die Daten bekommt
 
 
 
@@ -83,22 +82,31 @@ def main():
 
     while True:
         raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+
         if not raw:         
             continue
+
         payload = raw.split(',')[-1]
-        process_information(payload)
-        print(latest_data)
-     
+        signal  = raw.split(',')[1] 
+
+        process_information(payload,signal)
         push_to_db()
+
+        print(latest_data)                                                                   #For debugging purposes, can be removed later
         #time.sleep(1)
+
+
 
 @app.route('/incoming_data', methods=['GET'])
 def transfer_data():
     return jsonify(latest_data) 
 
+
+
+
 def push_to_db():
-  
     session = Session()
+
     try:
         ts = int(time.time())
         row_cache: dict[type, Base] = {}
@@ -111,7 +119,7 @@ def push_to_db():
             except ValueError:
                 numeric_val = None
 
-            if numeric_val not in (0.0, 1.0) and logged_snapshot.get(key) == val_str:
+            if numeric_val not in (0.0, 1.0) and logged_snapshot.get(key) == val_str:                               #klappt nicht bei den errors, da die immer 0 oder 1 sind
                 continue
             logged_snapshot[key] = val_str
 
@@ -119,7 +127,7 @@ def push_to_db():
             if not TableCls:
                 continue  
 
-            if TableCls not in row_cache:
+            if TableCls not in row_cache:                                                                          
                 row_cache[TableCls] = TableCls(time=ts)
 
             try:
@@ -138,7 +146,7 @@ def push_to_db():
 
     except Exception as exc:
         session.rollback()
-        print("DB‑Fehler:", exc)
+        print("DB-Fehler:", exc)
     finally:
         session.close()
 
@@ -156,8 +164,8 @@ class Apps(Base):
 class Speed(Base):
     __tablename__ = 'info'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    time  = Column(Integer)
-    speed = Column(Float)                            
+    time     = Column(Integer)
+    speed    = Column(Float)                            
     info_soc = Column(Float)
     info_ing = Column(Integer)
 
