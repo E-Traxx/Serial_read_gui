@@ -150,7 +150,7 @@ app.layout = html.Div(
                             children=[
                                 dcc.Graph(id='speed-text', style={'height': '180px', **GRAPH_STYLE}),
                                 dcc.Graph(id='motor-temp-text', style={'height': '180px', **GRAPH_STYLE}),
-                                dcc.Graph(id='inverter-temp-text', style={'height': '180px', **GRAPH_STYLE}),
+                                dcc.Graph(id='signal-text', style={'height': '180px', **GRAPH_STYLE}),
                                 dcc.Graph(id='soc-text', style={'height': '180px', **GRAPH_STYLE}),
                             ],
                             style={
@@ -176,7 +176,8 @@ app.layout = html.Div(
                                 "temperature_u2_inverter",
                                 "info_soc",
                                 "current_bms",
-                                "charge_bms"
+                                "charge_bms",
+                                "signal_info",
                             ]},
                             **{error: [] for error in ERROR_SIGNALS}
                         }),
@@ -338,11 +339,14 @@ def update_store(n, data):
         "temperature_u1_motor": {"type": int},
         "temperature_u2_motor": {"type": int},
         "temperature_u1_inverter": {"type": int},
-        "temperature_u2_inverter": {"type": int}
+        "temperature_u2_inverter": {"type": int},
+                
+        "signal_info": {"type": int},
     }
     
     for signal, config in signal_config.items():
-        raw_value = new_data.get(signal, 0)
+        source_key = config.get("source", signal)
+        raw_value = new_data.get(source_key, 0)
         try:
             if config["type"] == float:
                 value = float(raw_value) * config.get("factor", 1.0)
@@ -388,7 +392,7 @@ def update_leds(data):
 @app.callback(
     [Output('speed-text', 'figure'),
      Output('motor-temp-text', 'figure'),
-     Output('inverter-temp-text', 'figure'),
+     Output('signal-text', 'figure'),
      Output('soc-text', 'figure')],
     Input('data-store', 'data')
 )
@@ -396,14 +400,37 @@ def update_indicators(data):
     indicators = [
         ('speed', 'Geschwindigkeit', 'km/h', '#00ff00'),
         ('temperature_u1_motor', 'Motor Temp', '°C', '#ff6600'),
-        ('temperature_u1_inverter', 'Inverter Temp', '°C', '#ff00ff'),
+        ('signal_info', 'signal', 'dBm', '#ff00ff'),             
         ('info_soc', 'Ladezustand', '%', '#00ffff')
     ]
+      
+                 
     
     figs = []
     for key, title, unit, color in indicators:
         try:
+            if key == 'signal_info':           
+                 if value < -50:
+                     color = "#00ff00"  
+                 elif value >= -60:
+                     color = "#66ff66"  
+                 elif value >= -70:
+                     color = "#ffff00"  
+                 elif value >= -80:
+                     color = "#ff9900"  
+                 else:
+                     color = "#ff0000" 
+
+
             value = data[key][-1] if data[key] else 0
+
+            if key == 'signal_info':
+                if value > -60:
+                    color = "#00ff00"  
+                elif value > -80:
+                   color = "#ffff00"  
+                else:
+                    color = "#ff0000"  
          
             number_size = 50 if key == 'info_soc' else 40
             fig = go.Figure(go.Indicator(
@@ -413,6 +440,7 @@ def update_indicators(data):
                 title={"text": title, "font": {"color": "white", "size": 16}},
                 delta={'reference': data[key][-2] if len(data[key]) > 1 else 0}
             ))
+
            
             fig.update_layout(**DARK_LAYOUT)
             fig.update_layout(
