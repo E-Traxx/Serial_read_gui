@@ -1,4 +1,4 @@
-import serial,time,re,random
+import serial,time,re,random,os,json
 import pandas as pd
 from flask import Flask, jsonify
 from random import randint
@@ -16,7 +16,9 @@ password        = 'Etraxx_25'
 host            = 'localhost'
 database        = 'database_etraxx'
 port            = "3306"
- 
+BASE_DIR        = os.path.dirname(os.path.abspath(__file__))                #erstell die file im Ordner wo Reader.py liegt
+LOG_PATH        = os.path.join(BASE_DIR, "logs", "telemetry.log")
+
 connection_url  = f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
 engine          = create_engine(connection_url, echo=True)
 Base            = declarative_base()
@@ -25,6 +27,12 @@ app             = Flask(__name__)
 
 latest_data     = {}                                                                        #GUI bezieht daraus die Daten
 logged_snapshot = {}                                                                        #zusätzliches Dictionary, um doppelte Einträge zu vermeiden. Deswegen NULL-Werte wenn doppelte auftauchen, blöd bei den errors :(
+
+
+log_dir = os.path.dirname(LOG_PATH)
+if log_dir:
+    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+
 
 CSV_ID = {
     #"4240": "electrical_msg_can.csv",
@@ -37,6 +45,26 @@ CSV_ID = {
     "0640": "error_msg_can.csv",
     #"4220": "temperature_msg_can.csv",}
     "41D0": "temperature_msg_can.csv",}
+
+
+if not os.path.exists(LOG_PATH):
+    print("Log file will be created on first write.\n")
+else:
+    print("Log file exists. Appending new data.\n")
+
+
+def append_to_log(name, value):
+    object_to_log = {
+        "name": name,
+        "value": value,
+        "time": datetime.datetime.now().strftime("%H:%M:%S"),
+        "timestamp": time.time()
+    }
+    print(object_to_log)
+    with open(LOG_PATH, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(object_to_log) + "\n")
+
+
 
 
 def process_information(frame,signal):
@@ -52,8 +80,8 @@ def process_information(frame,signal):
     
     binary_message = format(int(payload_hex, 16), f'0{len(payload_hex)*4}b')
     
-    csv_information = {}
-    ID_file = CSV_ID.get(ID)
+  
+    ID_file  = CSV_ID.get(ID)
     if not ID_file:
         return        
 
@@ -74,7 +102,7 @@ def process_information(frame,signal):
         computed_value    = decimal_value * factor
 
         latest_data[name] =  f"{computed_value:.2f}"                                                #übergibt namen aus CSV und Wert in latest_data, damit GUI die Daten bekommt
-
+        append_to_log(name, computed_value)                                                          #Loggen der Daten in
 
 
 def main():
