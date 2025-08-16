@@ -123,7 +123,7 @@ app.layout = html.Div(
             },
         ),
 
-        dcc.Interval(id='interval-component', interval=1000, n_intervals=0),
+        dcc.Interval(id='interval-component', interval=500, n_intervals=0),
 
         # Hauptlayout
         html.Div(
@@ -424,13 +424,13 @@ def update_indicators(data):
 
             value = data[key][-1] if data[key] else 0
 
-            if key == 'signal_info':
-                if value > -60:
-                    color = "#00ff00"  
-                elif value > -80:
-                   color = "#ffff00"  
-                else:
-                    color = "#ff0000"  
+            #if key == 'signal_info':
+            #    if value > -60:
+            #        color = "#00ff00"  
+            #    elif value > -80:
+            #       color = "#ffff00"  
+            #    else:
+            #        color = "#ff0000"  
          
             number_size = 50 if key == 'info_soc' else 40
             fig = go.Figure(go.Indicator(
