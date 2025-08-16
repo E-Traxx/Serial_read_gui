@@ -76,7 +76,7 @@ def process_information(frame,signal):
     ID          = id_hex.lstrip("0").upper() or "0"   
     payload_hex = frame[4:]      
     
-    latest_data['signal_info'] = int(signal, 16)                                                 # Signal Information
+    latest_data['signal_info'] = int(signal)                                                 # Signal Information
     
     binary_message = format(int(payload_hex, 16), f'0{len(payload_hex)*4}b')
     
