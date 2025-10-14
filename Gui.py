@@ -1,16 +1,20 @@
-FONT_FAMILY = "Inter, Roboto, Arial, sans-serif"
-GRID_COLOR  = "#555"   # etwas heller als #444
-SPACING_4   = "4px"
-SPACING_8   = "8px"
-SPACING_16  = "16px"
-SPACING_32  = "32px"
-
 import dash
 from dash import html, dcc, callback, Input, Output, State
 import plotly.express as px
 import pandas as pd
 import plotly.graph_objs as go
 import requests
+
+
+
+FONT_FAMILY = "Inter, Roboto, Arial, sans-serif"
+GRID_COLOR  = "#555"   
+SPACING_4   = "4px"
+SPACING_8   = "8px"
+SPACING_16  = "16px"
+SPACING_32  = "32px"
+
+# Backend API URL,  die aus der Telemetriedaten abgerufen werden
 
 API_URL = "http://127.0.0.1:8024/incoming_data"
 
@@ -43,7 +47,8 @@ DARK_LAYOUT = {
 # Card Style für alle Graphen
 GRAPH_STYLE = {'borderRadius': '15px', 'overflow': 'hidden'}
 
-# Helper to improve axis readability
+
+# Applies consistent styling to x and y axes
 def apply_axis_style(fig):
     fig.update_xaxes(
         title_text='',
@@ -52,7 +57,7 @@ def apply_axis_style(fig):
         tickfont=dict(size=10),
         showgrid=True,
         gridcolor="#444",
-        dtick=1  # one tick per measurement
+        dtick=1 
     )
     fig.update_yaxes(
         tickfont=dict(size=10),
@@ -61,7 +66,7 @@ def apply_axis_style(fig):
         gridcolor="#444"
     )
 
-# Helper to put legends above the plots
+# puts legends above the plots
 def place_legend_top(fig):
     fig.update_layout(
         legend=dict(
@@ -77,7 +82,7 @@ def place_legend_top(fig):
 
 app.layout = html.Div(
     children=[
-        # Fehler‑LED‑Bar (mit Klartext)
+        # Fehler‑LED‑Bar oben
         html.Div(
             children=[
                 html.Div(
@@ -93,15 +98,17 @@ app.layout = html.Div(
                                 "transition": "all 0.25s ease"
                             },
                         ),
-                        html.Span(
-                            err.replace("_", " "),
-                            style={
-                                "marginTop": "4px",
-                                "fontSize": "11px",
-                                "color": "white",
-                                "whiteSpace": "nowrap",
-                            },
-                        ),
+
+                        #html.Span(
+                        #    err.replace("_", " "),
+                        #    style={
+                        #        "marginTop": "4px",
+                        #        "fontSize": "11px",
+                        #        "color": "white",
+                        #        "whiteSpace": "nowrap",
+                        #    },
+                        #),
+                        
                     ],
                     style={
                         "display": "flex",
@@ -123,7 +130,7 @@ app.layout = html.Div(
             },
         ),
 
-        dcc.Interval(id='interval-component', interval=500, n_intervals=0),
+        dcc.Interval(id='interval-component', interval=500, n_intervals=0),     # alle 500 ms aktualisieren
 
         # Hauptlayout
         html.Div(
@@ -132,20 +139,20 @@ app.layout = html.Div(
                 html.Div(
                     children=[
                         html.Div(
-                            children=[
+                            children=[      # Obere Hauptcharts
                                 dcc.Graph(id='speed-graph', style={'flex': 1, 'height': '300px', **GRAPH_STYLE}),
                                 dcc.Graph(id='bms-graph',   style={'flex': 1, 'height': '300px', **GRAPH_STYLE}),
                             ],
                             style={'display': 'flex', 'gap': SPACING_32, 'marginBottom': '30px'}
                         ),
                         html.Div(
-                            children=[
+                            children=[  # Mittlere Hauptcharts
                                 dcc.Graph(id='throttle-brake-graph', style={'flex': 1, **GRAPH_STYLE}),
                                 dcc.Graph(id='inverter-graph', style={'flex': 1, **GRAPH_STYLE}),
                             ],
                             style={'display': 'flex', 'gap': SPACING_32, 'height': '300px'}
                         ),
-                        # KPI‑Tiles kompakt (unter den Hauptcharts)
+                        # unten links – kleine grapen
                         html.Div(
                             children=[
                                 dcc.Graph(id='speed-text', style={'height': '180px', **GRAPH_STYLE}),
@@ -225,6 +232,7 @@ def fetch_data():
      Output('soc-graph', 'figure')],
     Input('data-store', 'data')
 )
+
 def update_graphs(data):
     try:
         index_window = list(range(len(data["time"])))[-10:]
@@ -316,6 +324,8 @@ def update_graphs(data):
     Input('interval-component', 'n_intervals'),
     State('data-store', 'data')
 )
+
+
 def update_store(n, data):
     new_data = fetch_data()
     time_stamp = pd.Timestamp.now().isoformat()

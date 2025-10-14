@@ -1,93 +1,63 @@
-import serial, time,re, random,os, json,datetime
+import serial,time,re,random
 import pandas as pd
 from flask import Flask, jsonify
 from random import randint
 from threading import Thread
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base  # <-- change this import
+#from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Unicode, String, MetaData, Float 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATA_BASE = 'telemetry.db'
-baudrate = 115200
-serial_port = "COM3"  
-
-BASE_DIR        = os.path.dirname(os.path.abspath(__file__))                #erstell die file im Ordner wo Reader.py liegt
-LOG_PATH        = os.path.join(BASE_DIR, "logs", "telemetry.log")
-
-
-user = 'root'
+baudrate = 9600
+serial_port = "COM4"  
+user = 'Exxe25'
 password = 'Etraxx_25'
 host = 'localhost'
-database = 'test_01'
-port = "3306"  
-
+database = 'database_etraxx'
+port = "3306"
 
 
 connection_url= f"mysql+mysqlconnector://{user}:{password}@{host}/{database}"
 engine = create_engine(connection_url, echo=True)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
-
 app = Flask(__name__)
-
-
-log_dir = os.path.dirname(LOG_PATH)
-if log_dir:
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-
-
 latest_data = { }
+
 logged_snapshot = {}
 
 CSV_ID ={
-    "424": "electrical_msg_can.csv",
-    "421": "info_msg_can.csv",
-    "423": "driver_input_msg_can.csv",
-    "420": "error_msg_can.csv",
-    "422": "temperature_msg_can.csv",}
+    #"4240": "electrical_msg_can.csv",
+    "1F10": "electrical_msg_can.csv",
+    #"4210": "info_msg_can.csv",
+    "1A00": "info_msg_can.csv",
+    "4230": "driver_input_msg_can.csv",
+    #"00670": "driver_input_msg_can.csv",
+    #"4200": "error_msg_can.csv",
+    "0640": "error_msg_can.csv",
+    #"4220": "temperature_msg_can.csv",}
+    "41D0": "temperature_msg_can.csv",}
 
-if not os.path.exists(LOG_PATH):
-    print("Log file will be created on first write.\n")
-else:
-    print("Log file exists. Appending new data.\n")
-
-
-def append_to_log(name, value):
-    object_to_log = {
-        "name": name,
-        "value": value,
-        "time": datetime.datetime.now().strftime("%H:%M:%S"),
-        "timestamp": time.time()
-    }
-    print(object_to_log)
-    with open(LOG_PATH, 'a', encoding='utf-8') as f:
-        f.write(json.dumps(object_to_log) + "\n")
-         
 
 def process_information(frame):
     frame = frame.strip()
+    if len(frame) <= 4:
+        return
 
   
     id_hex      = frame[:4]               
     ID          = id_hex.lstrip("0").upper() or "0"   
     payload_hex = frame[4:]                
-    signal = frame[7:9]
-
-
-
-
-    latest_data['signal_info'] =int(signal,16)
-   
-    
 
     
 
     binary_message = format(int(payload_hex, 16), f'0{len(payload_hex)*4}b')
     
-   
+    csv_information = {}
     ID_file = CSV_ID.get(ID)
-            
+    if not ID_file:
+        return        
     try:
         csv_file = pd.read_csv(ID_file, sep=";", encoding="utf-8")
     except UnicodeDecodeError:
@@ -105,80 +75,34 @@ def process_information(frame):
         computed_value = decimal_value * factor
 
         latest_data[name] =  f"{computed_value:.2f}"
-        append_to_log(name, computed_value)   
 
 
 
 def main():
+    ser = serial.Serial(serial_port, baudrate, timeout=1)
 
     while True:
-
-       # raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
-
-
-        #payload = raw.split(',')[-1]       
-       
-
-      #  push_to_db()
-        #time.sleep(1)
-
-
-
-
-
-
-        
-#
-       # if not raw.upper().startswith("AT+P2PUNICASTTX="):
-       #     continue
-#
-       # stored_frame = raw
-       # status = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
-#
-       # if status.upper() == "OK":
-       #     
-       #     payload = stored_frame.split('=', 1)[1]            
-       #     process_information(payload)
-       #     push_to_db()
-#
-       # elif status == "AT_DUTYCYCLE_RESTRICTED":
-       #     ser.write(b"ATZ\r\n")
-       #     time.sleep(1.5)
-#
-       # else:
-       #     print("unerwartet komisch hmm... Neustart")
-       #     ser.write(b"ATZ\r\n")
-       #     time.sleep(1.5)
-            
-
-
-
-        id_hex_raw = random.choice(list(CSV_ID.keys()))   
-        id_hex     = f"{int(id_hex_raw, 16):04X}"         
-        rand_hex_str = ''.join(f"{randint(0, 15):X}" for _ in range(80))
-
-        test_message = f"+cast2:3:2,{id_hex}{rand_hex_str}"
-        payload = test_message.split(',')[-1]     
+        raw = ser.readline().decode('ascii', errors='ignore').rstrip('\r\n')
+        if not raw:         
+            continue
+        payload = raw.split(',')[-1]
         process_information(payload)
-
-        #print(latest_data)
-        time.sleep(1)  # Simulate a delay for testing purposes
-
+        print(latest_data)
+     
+        push_to_db()
+        #time.sleep(1)
 
 @app.route('/incoming_data', methods=['GET'])
 def transfer_data():
-    return jsonify(latest_data)
+    return jsonify(latest_data) 
 
-
-
-#regelt die Datenübergabe und checkt nach wiederholungen, check?    
 def push_to_db():
   
     session = Session()
     try:
         ts = int(time.time())
         row_cache: dict[type, Base] = {}
-
+        #row_cache = {}
         for key, val_str in latest_data.items():
 
             
@@ -309,11 +233,9 @@ table_mapping = {
     "error_undervoltage": Errors,
     "bms_error": Errors,
     "error_u1_inverter": Errors,
-}
+}           
 
 if __name__ == "__main__":
     Base.metadata.create_all(engine)
-    Thread(target=lambda: app.run(host='127.0.0.1', port=8024, debug= False)).start()        
+    Thread(target=lambda: app.run(host='127.0.0.1', port=8024, debug=False)).start()
     main()
-    
-        
