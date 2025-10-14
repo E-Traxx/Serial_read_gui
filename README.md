@@ -158,7 +158,7 @@ source .venv/bin/activate
 pip install -r requirements.txt  # or the pip line from Prerequisites
 
 # 3) Start backend (Flask + Serial + Parser)
-python serial_reader02.py
+python reader.py
 # -> http://127.0.0.1:8024
 
 # 4) Start GUI (Dash)
